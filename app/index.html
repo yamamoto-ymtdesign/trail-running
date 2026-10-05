@@ -225,6 +225,13 @@ details > .row, details > .field { margin-top: 10px; }
 .rband { stroke: var(--tape); stroke-width: 3; stroke-linecap: round; }
 .arrow { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+.chart .area { fill: var(--s1); fill-opacity: .12; }
+.chart .prof { stroke: var(--s1); fill: none; stroke-width: 2; stroke-linejoin: round; }
+.chart .aidl { stroke: var(--muted); stroke-width: 1; }
+.chart .aidt { fill: var(--ink-2); font-family: var(--font-body); font-size: 10px; }
+.chart .crux { fill: var(--tape); fill-opacity: .08; }
+.chart .cruxt { fill: var(--tape); font-family: var(--font-body); font-size: 10px; }
+.chart .xhair { stroke: var(--ink-2); stroke-width: 1; }
 .review-body { white-space: pre-wrap; font-size: .92rem; line-height: 1.75; }
 .review-meta { font-size: .8rem; color: var(--muted); }
 
@@ -376,6 +383,7 @@ details > .row, details > .field { margin-top: 10px; }
       </section>
       <section class="panel" id="raceplan" aria-labelledby="rp-h" hidden>
         <div class="panel-head"><h2 id="rp-h">レース当日の通過目標</h2><span class="sub" id="rp-sub"></span></div>
+        <div class="chart" id="ch-course"></div>
         <div class="tablewrap" id="rp-table"></div>
         <p class="hint" id="rp-note"></p>
       </section>
@@ -741,9 +749,49 @@ details > .row, details > .field { margin-top: 10px; }
     $("raceplan").hidden = !aid;
     if (!aid) return;
     $("rp-sub").textContent = `スタート ${c.startTime || "6:00"}・制限${c.timeLimitH || 12}時間・目標 ${String(c.targetTime || "").replace(/（.*/, "")}`;
-    $("rp-table").innerHTML = `<table class="list"><thead><tr><th>地点</th><th class="r">距離</th><th class="r">目標</th><th class="r">時刻</th><th class="r">関門</th><th class="r">余裕</th></tr></thead><tbody>${aid.map(a =>
-      `<tr><td>${esc(a.name)}</td><td class="r num">${esc(a.km)}km</td><td class="r num"><b>${esc(a.target)}</b></td><td class="r num">${esc(a.clock)}</td><td class="r num">${esc(a.cutoff)}</td><td class="r num">${esc(a.margin)}</td></tr>`).join("")}</tbody></table>`;
+    $("rp-table").innerHTML = `<table class="list"><thead><tr><th>地点</th><th class="r">距離</th><th class="r">登り／下り(m)</th><th class="r">目標</th><th class="r">時刻</th><th class="r">関門</th></tr></thead><tbody>${aid.map(a =>
+      `<tr><td>${esc(a.name)}</td><td class="r num">${esc(a.km)}km</td><td class="r num">${a.up != null ? `+${esc(a.up)}／−${esc(a.down)}` : "—"}</td><td class="r num"><b>${esc(a.target)}</b></td><td class="r num">${esc(a.clock)}</td><td class="r num">${esc(a.cutoff)}</td></tr>`).join("")}</tbody></table>`;
+    courseChart($("ch-course"), aid);
     $("rp-note").textContent = c.aidNote || "";
+  }
+  // Course profile from the official GPX, sampled every 0.1km (index * 0.1 = km; last point is 49.8km)
+  const COURSE_ELE = [24, 24, 27, 28, 34, 32, 24, 24, 23, 22, 22, 21, 21, 21, 21, 20, 20, 20, 21, 21, 22, 20, 24, 25, 25, 24, 25, 25, 25, 24, 24, 19, 20, 20, 25, 25, 21, 22, 20, 21, 21, 21, 24, 39, 71, 88, 99, 148, 156, 174, 188, 192, 201, 191, 183, 164, 143, 103, 83, 50, 43, 32, 27, 28, 20, 18, 19, 23, 25, 54, 98, 130, 168, 208, 239, 247, 244, 256, 244, 197, 179, 219, 215, 187, 152, 125, 117, 139, 170, 207, 243, 255, 260, 278, 272, 273, 282, 287, 287, 279, 235, 221, 180, 185, 154, 121, 88, 87, 106, 135, 165, 202, 210, 182, 172, 165, 180, 192, 220, 199, 195, 164, 149, 130, 106, 79, 72, 69, 68, 64, 62, 53, 49, 46, 43, 42, 39, 38, 40, 34, 35, 35, 33, 33, 32, 32, 33, 32, 33, 33, 33, 33, 33, 32, 35, 34, 34, 34, 35, 36, 37, 46, 39, 40, 41, 43, 2, 5, 10, 14, 18, 27, 36, 41, 59, 73, 78, 87, 110, 128, 139, 151, 180, 209, 206, 206, 192, 169, 150, 162, 154, 129, 100, 71, 54, 27, 50, 50, 56, 60, 60, 52, 50, 45, 41, 40, 35, 36, 36, 36, 36, 36, 34, 27, 30, 37, 36, 36, 34, 32, 32, 33, 34, 44, 61, 83, 109, 127, 144, 161, 184, 197, 209, 223, 227, 234, 267, 286, 308, 319, 328, 333, 352, 355, 348, 359, 378, 380, 386, 390, 389, 394, 398, 405, 411, 423, 434, 447, 444, 452, 455, 448, 435, 428, 432, 434, 435, 433, 429, 422, 413, 408, 404, 396, 387, 378, 369, 360, 352, 347, 335, 331, 321, 321, 311, 303, 294, 281, 280, 277, 273, 268, 265, 263, 253, 245, 237, 232, 225, 215, 210, 203, 194, 187, 181, 176, 167, 160, 150, 143, 135, 128, 119, 115, 116, 110, 101, 92, 91, 92, 91, 86, 78, 75, 70, 66, 64, 63, 64, 61, 54, 50, 40, 40, 43, 40, 37, 33, 50, 95, 142, 186, 213, 259, 303, 322, 324, 332, 329, 315, 312, 314, 336, 366, 402, 399, 407, 398, 391, 392, 398, 398, 398, 394, 360, 334, 328, 302, 290, 269, 270, 269, 256, 242, 231, 221, 210, 204, 198, 191, 191, 194, 201, 206, 212, 209, 200, 185, 177, 162, 150, 140, 128, 120, 111, 102, 95, 88, 86, 85, 87, 95, 108, 123, 128, 134, 151, 168, 195, 226, 275, 296, 327, 327, 318, 336, 345, 344, 356, 365, 335, 320, 312, 308, 295, 281, 256, 227, 209, 168, 126, 90, 74, 65, 56, 53, 47, 45, 37, 35, 33, 30, 29, 30, 30, 33, 42, 60, 98, 124, 154, 183, 221, 203, 186, 186, 208, 210, 197, 167, 169, 156, 162, 148, 168, 172, 152, 149, 162, 131, 147, 126, 127, 126, 141, 140, 164, 158, 123, 86, 46, 22, 21, 21, 21, 20, 20, 21, 21, 21, 21, 21, 22, 22, 23, 23, 20, 22, 22, 22];
+  const CRUX = [33.7, 45.2];
+  function courseChart(box, aid) {
+    const W = Math.max(280, box.clientWidth || 320), H = 150, L = 34, R = 8, T = 18, B = 22;
+    const pw = W - L - R, ph = H - T - B, xmax = 49.8, ymax = 500;
+    const kmAt = i => Math.min(i / 10, xmax);
+    const x = k => L + (k / xmax) * pw, y = e => T + ph - (e / ymax) * ph;
+    const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "コースの高低図。最高点は約460m。33.7km〜45.2kmに急な登りと下りが続く" });
+    svg.appendChild(svgEl("rect", { x: x(CRUX[0]), y: T, width: x(CRUX[1]) - x(CRUX[0]), height: ph, class: "crux" }));
+    const ct = svgEl("text", { x: x((CRUX[0] + CRUX[1]) / 2), y: T + 10, "text-anchor": "middle", class: "cruxt" }); ct.textContent = "勝負どころ"; svg.appendChild(ct);
+    [0, 200, 400].forEach(v => {
+      svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: v === 0 ? "base" : "gridl" }));
+      const t = svgEl("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v; svg.appendChild(t);
+    });
+    [0, 10, 20, 30, 40].forEach(k => { const t = svgEl("text", { x: x(k), y: H - 6, "text-anchor": "middle" }); t.textContent = k + "km"; svg.appendChild(t); });
+    let d = "";
+    COURSE_ELE.forEach((e, i) => { d += `${i ? "L" : "M"}${x(kmAt(i)).toFixed(1)},${y(e).toFixed(1)}`; });
+    svg.appendChild(svgEl("path", { d: `${d}L${x(xmax)},${y(0)}L${x(0)},${y(0)}Z`, class: "area" }));
+    svg.appendChild(svgEl("path", { d, class: "prof" }));
+    (aid || []).filter(a => a.km < xmax).forEach(a => {
+      svg.appendChild(svgEl("line", { x1: x(a.km), x2: x(a.km), y1: T - 4, y2: y(0), class: "aidl" }));
+      const t = svgEl("text", { x: x(a.km), y: T - 7, "text-anchor": "middle", class: "aidt" }); t.textContent = a.name; svg.appendChild(t);
+    });
+    const xh = svgEl("line", { x1: 0, x2: 0, y1: T, y2: y(0), class: "xhair" }); xh.style.display = "none"; svg.appendChild(xh);
+    const hit = svgEl("rect", { x: L, y: T, width: pw, height: ph, class: "hit" });
+    const move = ev => {
+      const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+      const k = Math.max(0, Math.min(xmax, ((px - L) / pw) * xmax)), i = Math.min(COURSE_ELE.length - 1, Math.round(k * 10));
+      const seg = (aid || []).find(a => k <= a.km);
+      const prev = seg ? (aid.indexOf(seg) ? aid[aid.indexOf(seg) - 1].name : "スタート") : "";
+      xh.setAttribute("x1", x(k)); xh.setAttribute("x2", x(k)); xh.style.display = "";
+      tipShow(box, (x(k) / W) * box.clientWidth, (y(COURSE_ELE[i]) / H) * box.clientHeight, `${k.toFixed(1)}km・標高 ${COURSE_ELE[i]}m${seg ? `<br>${esc(prev)} → ${esc(seg.name)}` : ""}`);
+    };
+    hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
+    hit.addEventListener("pointerleave", () => { xh.style.display = "none"; tipHide(box); });
+    svg.appendChild(hit);
+    box.replaceChildren(svg);
   }
   function renderReview() {
     const r = state.reviews.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
@@ -989,7 +1037,7 @@ details > .row, details > .field { margin-top: 10px; }
   $("nextw").addEventListener("click", () => { state.selWeek = Math.min(24, state.selWeek + 1); render(); });
 
   let lastW = 0;
-  new ResizeObserver(() => { const w = $("ch-hours").clientWidth; if (Math.abs(w - lastW) > 4) { lastW = w; renderCharts(); } }).observe(document.querySelector(".cols"));
+  new ResizeObserver(() => { const w = $("ch-hours").clientWidth; if (Math.abs(w - lastW) > 4) { lastW = w; renderCharts(); renderRacePlan(); } }).observe(document.querySelector(".cols"));
 
   /* ---------- data ---------- */
   const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
