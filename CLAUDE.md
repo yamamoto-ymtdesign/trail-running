@@ -21,6 +21,8 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
 | `app/index.html` | 記録アプリ（claude.ai アーティファクト）のソース |
 | `reference/` | 他のAIが作った元の計画（参考） |
 | `docs/course/wat2027_long.gpx` | 2027年ロングの公式コースGPX（ユーザー提供） |
+| `docs/session-notes.md` | セッションでの経緯・決定の理由・ユーザーの好み。ナレッジの一部 |
+| `tools/build_knowledge.py` | ナレッジ（session-notes・athlete・race・training-plan をつないだもの）をJSONにする |
 | `tools/course_pacing.py` | GPXから区間の登り下りとエイドの通過目標を計算する（`python3 tools/course_pacing.py 500 0.15`） |
 
 ## 記録アプリ
@@ -35,13 +37,15 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
 | `activities` | 自動ID | ユーザー | date, kind(trail/hill/road/hike/strength/other), min, km, dplus, hr, rpe(1-10), carbs(g合計), fluid(ml合計), gi(0-3), note, createdAt |
 | `checkins` | `YYYY-MM-DD` | ユーザー | date, fatigue(1-5), quad(0-10), knee(0-10), where[], sleep(h), rhr, note |
 | `reviews` | `w01` など | Claude | date, week, title, body（プレーンテキスト） |
-| `config` | `main` | Claude | raceDate, raceName, distanceKm, dplusM, targetTime, planVersion, updatedAt |
+| `config` | `main` | Claude | raceDate, raceName, distanceKm, dplusM, startTime, timeLimitH, targetTime, targetStretch, targetFloor, aid[{name,km,up,down,target,clock,cutoff,margin}], aidNote, planVersion, updatedAt |
+| `knowledge` | `main` | Claude | body（ナレッジ本文）, sources, updatedAt。アプリの「Claudeに質問」が毎回これを読む |
+| `qa` | 自動ID | アプリ | q, a, createdAt, truncated。「Claudeに質問」の質問と回答 |
 
 週の集計で走行量に数えるのは trail / hill / road / hike だけ（strength と other は除く）。
 
 ## 週次レビューの手順（「今週のレビューをして」と頼まれたら）
 
-1. **読む**：`activities`（直近5週）、`checkins`（直近14日）、`weeks` の今週と次の4週、`reviews` の前回分
+1. **読む**：`activities`（直近5週）、`checkins`（直近14日）、`weeks` の今週と次の4週、`reviews` の前回分、`qa`（前回のレビュー以降の質問。気にしていることの手がかりになる）
 2. **集計する**：週の時間・D+・最長の1回・km-effort を計画の幅と比べる。補給の g/時、定点テストの結果も見る
 3. **ルールを当てる**
    - ロング走が直近30日の最長の1.1倍を超えた → 次のロングは伸ばさない
@@ -54,7 +58,15 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
    - `weeks` の該当週を `update`（`if_version` を必ず付ける）。`plan/weeks.json` も同じ内容に直す
    - `reviews/wNN` に、ユーザー向けの短いレビュー（良かった点、気になる点、来週の変更点）を `set`
    - `reviews/YYYY-Www.md` を作り、計画を変えたら `plan/training-plan.md` の変更履歴に追記する
+   - 計画・大会情報・経緯を変えたら、`docs/session-notes.md` の経緯に1行足し、ナレッジを作り直してアップロードする（下の「ナレッジの更新」）
    - コミットして push する
+
+## ナレッジの更新
+
+アプリの「Claudeに質問」は、`knowledge/main` のナレッジと最新の記録をもとに、まず計画・記録から答え、なければ一般的な知識で答える（指示文は `app/index.html` の `ASK_RULES`）。ナレッジはこのリポジトリの文書から作るので、文書を変えたら必ず更新する。
+
+1. `python3 tools/build_knowledge.py <出力先>.json`
+2. ArtifactData で `knowledge/main` に `set`（既存なので、先に `get` して `if_version` を付ける）
 
 ## 目標（2026-10-05 設定）
 
