@@ -20,6 +20,8 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
 | `reviews/YYYY-Www.md` | 週次レビューの記録（ISO週番号。2026-W41 が計画のW1） |
 | `app/index.html` | 記録アプリ（claude.ai アーティファクト）のソース |
 | `reference/` | 他のAIが作った元の計画（参考） |
+| `docs/course/wat2027_long.gpx` | 2027年ロングの公式コースGPX（ユーザー提供） |
+| `tools/course_pacing.py` | GPXから区間の登り下りとエイドの通過目標を計算する（`python3 tools/course_pacing.py 500 0.15`） |
 
 ## 記録アプリ
 
@@ -65,7 +67,8 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
 
 ## 決まっていないこと
 
-- **ポール使用可否、区間ごとの累積標高（高低図）**：分かったら通過目標を作り直す。距離49.8km・D+2,850m、制限12時間、エイド位置と関門はユーザーから確認済み（docs/race.md）
+- **ポール使用可否**：ユーザーの記憶では使えない。大会ルールで確認する
+- コースは公式GPX（ユーザー提供）で解析済み。区間ごとの登り下りと通過目標は docs/race.md。アプリの高低図は `app/index.html` の `COURSE_ELE`（0.1km刻み）
 - **intervals.icu 連携**：この作業環境のネットワーク設定で intervals.icu への接続が拒否されている。ユーザーが環境設定の Allowed domains に `intervals.icu` を追加し、APIキーを用意すれば、活動データを自動で取り込める。Strava 経由のデータは Strava の規約で API から取れないので、Zepp から直接つなぐ
 
 ## 計画の原則（変えるときは理由を残す）
