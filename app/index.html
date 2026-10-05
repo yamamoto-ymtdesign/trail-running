@@ -232,6 +232,22 @@ details > .row, details > .field { margin-top: 10px; }
 .chart .crux { fill: var(--tape); fill-opacity: .08; }
 .chart .cruxt { fill: var(--tape); font-family: var(--font-body); font-size: 10px; }
 .chart .xhair { stroke: var(--ink-2); stroke-width: 1; }
+/* ask */
+.chat { display: grid; gap: 10px; max-height: 460px; overflow-y: auto; padding-right: 2px; }
+.msg { max-width: 92%; padding: 9px 12px; border-radius: 10px; font-size: .9rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.user { justify-self: end; background: var(--accent-soft); color: var(--ink); border-bottom-right-radius: 3px; }
+.msg.ai { justify-self: start; background: var(--bg); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+.msg.ai.thinking { color: var(--muted); }
+.msg .srcchip { display: inline-block; font-size: .72rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; margin-bottom: 4px; white-space: nowrap; }
+.srcchip.plan { background: var(--accent-soft); color: var(--accent); }
+.srcchip.general { background: var(--grid); color: var(--ink-2); }
+.srcchip.mixed { background: var(--warn-bg); color: var(--warn); }
+.msg .note2 { display: block; font-size: .76rem; color: var(--muted); margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: .82rem; cursor: pointer; color: var(--ink-2); text-align: left; }
+.chip:hover { border-color: var(--accent); color: var(--ink); }
+.ghost { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 14px; cursor: pointer; min-height: 44px; }
+
 .review-body { white-space: pre-wrap; font-size: .92rem; line-height: 1.75; }
 .review-meta { font-size: .8rem; color: var(--muted); }
 
@@ -361,6 +377,23 @@ details > .row, details > .field { margin-top: 10px; }
     </div>
 
     <div class="col">
+      <section class="panel" id="ask" aria-labelledby="ask-h" hidden>
+        <div class="panel-head">
+          <h2 id="ask-h">Claudeに質問</h2>
+          <button class="del" id="ask-new" type="button">新しい会話</button>
+        </div>
+        <p class="sub">あなたの計画・記録と、和気トレイルについて調べた内容から先に答えます。そこにないことは、一般的な知識として答えます。</p>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <div class="chips" id="ask-chips"></div>
+        <form id="ask-form" novalidate>
+          <div class="field"><label for="ask-q">質問</label><textarea id="ask-q" placeholder="例：今週の木曜は雨。里山の代わりに何をすればいい？"></textarea></div>
+          <div class="actions">
+            <button class="primary" type="submit" id="ask-send">送信</button>
+            <button class="ghost" type="button" id="ask-stop" hidden>止める</button>
+            <span class="formmsg" id="ask-msg"></span>
+          </div>
+        </form>
+      </section>
       <section class="panel" aria-labelledby="ch1-h">
         <div class="panel-head"><h2 id="ch1-h">週の時間</h2><span class="sub">時間（h）</span></div>
         <div class="legend"><span class="key"><span class="sw bar"></span>実績</span><span class="key"><span class="sw over"></span>計画の上限+15%超</span><span class="key"><span class="sw band"></span>計画の幅</span></div>
@@ -453,7 +486,7 @@ details > .row, details > .field { margin-top: 10px; }
     return null;
   }
 
-  const state = { weeks: [], acts: [], checks: [], reviews: [], config: null, db: null, canWrite: true, selWeek: null, conn: "loading" };
+  const state = { weeks: [], acts: [], checks: [], reviews: [], config: null, db: null, canWrite: true, selWeek: null, conn: "loading", qa: [], localQa: [], knowledge: null, sample: null, askPending: null };
   const today = todayStr();
   const nowWeek = Math.min(Math.max(weekOf(today), 1), 24);
   state.selWeek = nowWeek;
@@ -1039,23 +1072,156 @@ details > .row, details > .field { margin-top: 10px; }
   let lastW = 0;
   new ResizeObserver(() => { const w = $("ch-hours").clientWidth; if (Math.abs(w - lastW) > 4) { lastW = w; renderCharts(); renderRacePlan(); } }).observe(document.querySelector(".cols"));
 
+
+  /* ---------- ask Claude ---------- */
+  const ASK_RULES = `あなたは、このユーザー専属のトレイルランニングのコーチ補佐です。下の【ナレッジ】（Claude Code のセッションでユーザーと決めた計画・大会情報・経緯）と【最新の記録】（記録アプリのデータ）を、いちばん優先する情報源として答えてください。
+
+答え方のルール
+1. まず【ナレッジ】と【最新の記録】の中に答えや手がかりがあるか探し、あればそれに基づいて答える。目標タイム、週の時間、通過目標、メニュー、回数などの数字は、必ずそこにある値を使い、作らない
+2. そこに答えがない場合だけ、一般的な知識で答える。その場合も、ユーザーの状況（44歳、膝と太もも前が弱点、2027/3/22 の和気アルプス 49.8km、目標 8:20）に合わせる
+3. 回答の1行目は、次のどれか1つだけにする：「根拠：あなたの計画・記録」「根拠：計画・記録＋一般的な知識」「根拠：一般的な知識」
+4. この画面では計画を書き換えられない。計画の変更が必要そうなら、提案として書き、「週末のレビューで Claude Code に相談してください」と添える
+5. 痛み・けがの相談は、ナレッジの警告ルールに沿って答え、強い痛みや長引く痛みには整形外科などの受診をすすめる
+6. ユーザーの好み：日本語。過剰に同調せず、必要なら批判的な視点も伝える。確実でないことは確実でないと書く。この画面からはWebを調べられないので、新しいURLは示さない（ナレッジにある出典は挙げてよい）。正解のない相談で目的が分からないときは、先に目的を短く確認してよい
+7. 書式：Markdown の見出しや表は使わない。短い段落と「・」の箇条書きで、長くても500字程度`;
+  const ASK_SUGGEST = ["今週いちばん大事な練習は？", "勝負どころ（33.7〜45.2km）の走り方は？", "太もも前の張りが抜けないときは？", "ロング走の補給は何をどれくらい？"];
+  const ASK_CTX_PAIRS = 3;
+  let askCtl = null, askBusy = false, chatSince = "";
+  try { chatSince = localStorage.getItem("chatSince") || ""; } catch (_) {}
+
+  function snapshotText() {
+    const L = [];
+    const dow = s => "日月火水木金土"[new Date(dnum(s) * 864e5).getUTCDay()];
+    L.push(`今日：${today}（${dow(today)}）・計画 W${nowWeek}/24`);
+    if (state.config) L.push(`設定：${JSON.stringify(state.config)}`);
+    L.push("\n今週と次の4週の計画：");
+    for (let n = nowWeek; n <= Math.min(24, nowWeek + 4); n++) {
+      const w = weekDoc(n); if (!w) continue;
+      L.push(`W${n} ${w.start}〜${w.end} ${w.phase}${w.focus ? "・" + w.focus : ""}／時間${rng(w.hours)}h・D+${rng(w.dplus)}m・ロング${rng(w.long)}h`);
+      (w.sessions || []).forEach(x => L.push(`  ${x.day}：${x.title}${x.detail ? "（" + x.detail + "）" : ""}`));
+      if (w.note) L.push(`  メモ：${w.note}`);
+    }
+    L.push("\n週ごとの実績（W1〜今週）：");
+    for (let n = 1; n <= nowWeek; n++) {
+      const g = weekAgg(n), w = weekDoc(n);
+      L.push(`W${n}：${fmtH(g.h)}h（計画${w ? rng(w.hours) : "—"}）・D+${Math.round(g.dplus)}m（計画${w ? rng(w.dplus) : "—"}）・最長${fmtH(g.longH)}h・${fmtH(g.km)}km`);
+    }
+    const since = addDays(today, -27);
+    const acts = state.acts.filter(a => a.date >= since).sort((a, b) => a.date.localeCompare(b.date));
+    L.push(`\n直近28日の練習（${acts.length}件）：`);
+    acts.forEach(a => L.push(`${a.date} ${KIND_LABEL[a.kind] || a.kind} ${fmtMin(a.min)}・${a.km ?? "—"}km・D+${a.dplus ?? "—"}m・心拍${a.hr ?? "—"}・きつさ${a.rpe ?? "—"}${a.carbs ? "・炭水化物" + a.carbs + "g" : ""}${a.fluid ? "・水分" + a.fluid + "ml" : ""}${a.gi != null ? "・胃腸" + a.gi : ""}${a.note ? "・メモ：" + a.note : ""}`));
+    const cks = state.checks.filter(c => c.date >= addDays(today, -13)).sort((a, b) => a.date.localeCompare(b.date));
+    L.push(`\n直近14日の体調（${cks.length}件）：`);
+    cks.forEach(c => L.push(`${c.date} 疲れ${c.fatigue ?? "—"}/5・太もも前${c.quad ?? "—"}/10・膝${c.knee ?? "—"}/10${c.where && c.where.length ? "（" + c.where.join("・") + "）" : ""}・睡眠${c.sleep ?? "—"}h・安静時心拍${c.rhr ?? "—"}${c.note ? "・メモ：" + c.note : ""}`));
+    const p = priorMax(today, true);
+    L.push(`\n次のロングの上限目安：${p ? fmtMin(p.min * 1.1) + "（直近30日の最長 " + fmtMin(p.min) + "・" + p.date + "）" : "記録なし"}`);
+    const al = alerts();
+    L.push(`現在の警告：${al.length ? al.map(a => a.t.replace(/<[^>]+>/g, "")).join(" ／ ") : "なし"}`);
+    const r = state.reviews.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+    if (r) L.push(`\n最新の週次レビュー（${r.date}）：\n${r.body}`);
+    return L.join("\n");
+  }
+  function chatItems() {
+    const saved = state.qa.filter(x => !chatSince || String(x.createdAt) >= chatSince).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    return [...saved, ...state.localQa.filter(x => !chatSince || x.createdAt >= chatSince)];
+  }
+  function answerHTML(text) {
+    let t = String(text || ""), chip = "";
+    const m = t.match(/^\s*根拠[:：]\s*(.+)\n?/);
+    if (m) {
+      const k = /＋|\+/.test(m[1]) ? "mixed" : /計画|記録/.test(m[1]) ? "plan" : "general";
+      chip = `<span class="srcchip ${k}">根拠：${esc(m[1].trim())}</span>\n`;
+      t = t.slice(m[0].length).replace(/^\n+/, "");
+    }
+    return chip + esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,6}\s*/gm, "");
+  }
+  function renderChat() {
+    const items = chatItems(), box = $("chat");
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    let html = "";
+    for (const it of items) {
+      html += `<div class="msg user">${esc(it.q)}</div>`;
+      html += `<div class="msg ai">${answerHTML(it.a)}${it.noteText ? `<span class="note2">${esc(it.noteText)}</span>` : ""}</div>`;
+    }
+    if (state.askPending) {
+      const p = state.askPending;
+      html += `<div class="msg user">${esc(p.q)}</div>`;
+      html += p.a ? `<div class="msg ai">${answerHTML(p.a)}</div>` : `<div class="msg ai thinking">考えています…（最初の返事まで数十秒かかることがあります）</div>`;
+    }
+    box.innerHTML = html;
+    box.hidden = !html;
+    $("ask-chips").hidden = !!items.length || !!state.askPending;
+    if (atBottom || state.askPending) box.scrollTop = box.scrollHeight;
+  }
+  $("ask-chips").innerHTML = ASK_SUGGEST.map(q => `<button class="chip" type="button">${esc(q)}</button>`).join("");
+  $("ask-chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; $("ask-q").value = b.textContent; $("ask-q").focus(); });
+  $("ask-new").addEventListener("click", () => {
+    chatSince = new Date().toISOString();
+    try { localStorage.setItem("chatSince", chatSince); } catch (_) {}
+    renderChat(); $("ask-msg").textContent = "";
+  });
+  $("ask-stop").addEventListener("click", () => { if (askCtl) askCtl.abort(); });
+  $("ask-q").addEventListener("keydown", e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $("ask-form").requestSubmit(); } });
+
+  const ASK_HIDE = new Set(["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"]);
+  $("ask-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const q = $("ask-q").value.trim();
+    if (!q || askBusy || !state.sample) return;
+    askBusy = true; $("ask-send").disabled = true; $("ask-stop").hidden = false; $("ask-msg").textContent = "";
+    state.askPending = { q, a: "" }; $("ask-q").value = ""; renderChat();
+    const pairs = chatItems().filter(x => x.a).slice(-ASK_CTX_PAIRS);
+    const turns = [{ role: "user", content: `${ASK_RULES}\n\n【ナレッジ】\n${state.knowledge && state.knowledge.body ? state.knowledge.body : "（ナレッジを読み込めていません）"}\n\n【最新の記録】\n${snapshotText()}` }];
+    pairs.forEach(x => { turns.push({ role: "user", content: x.q }); turns.push({ role: "assistant", content: x.a }); });
+    turns.push({ role: "user", content: q });
+    askCtl = new AbortController();
+    const createdAt = new Date().toISOString();
+    let answer = "", note = "";
+    try {
+      const r = await state.sample(turns, { cache: false, signal: askCtl.signal, onText: ({ text }) => { state.askPending.a = text; renderChat(); } });
+      answer = r.text; if (r.truncated) note = "長すぎて途中で切れました。質問を分けてください。";
+    } catch (err) {
+      const code = err && err.code;
+      answer = err && err.text ? err.text : "";
+      if (ASK_HIDE.has(code)) { state.sample = null; $("ask").hidden = true; }
+      else if (code === "cancelled") note = "止めました。";
+      else if (code === "rate_limited") note = "質問が続いたため止まりました。少し待ってから、もう一度送ってください。";
+      else if (code === "session_expired") note = "ログインし直してから、もう一度送ってください。";
+      else if (code === "refused") { answer = ""; note = "この質問には答えられませんでした。聞き方を変えてみてください。"; }
+      else if (code === "prompt_too_large") note = "記録が多すぎて送れませんでした。「新しい会話」を押してから、もう一度送ってください。";
+      else note = "途中で止まりました。もう一度送ってください。";
+    }
+    const item = { q, a: answer || "（回答なし）", createdAt, noteText: note };
+    state.askPending = null;
+    if (answer && state.db && state.canWrite) {
+      try { await state.db.collection("qa").add({ q, a: answer, createdAt, truncated: !!note }); }
+      catch (_) { state.localQa.push(item); }
+    } else state.localQa.push(item);
+    askBusy = false; askCtl = null; $("ask-send").disabled = false; $("ask-stop").hidden = true;
+    if (note) $("ask-msg").textContent = note;
+    renderChat();
+  });
+
   /* ---------- data ---------- */
   const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
   async function connect() {
     const use = window.claude && typeof window.claude.use === "function" ? window.claude.use.bind(window.claude) : null;
+    if (use) use("sample").then(sm => { state.sample = sm || null; $("ask").hidden = !state.sample; renderChat(); }).catch(() => {});
     const db = use ? await use("db").catch(() => null) : null;
     if (!db) { state.conn = "offline"; setWritable(); render(); return; }
     state.db = db;
     const user = await use("user").catch(() => null);
     if (user) { try { const c = await user.can("data.write"); if (c === false) state.canWrite = false; } catch (_) {} }
     const onErr = e => { if (e && e.code === "revoked") { state.db = null; state.conn = "offline"; } setWritable(); render(); };
-    let pending = 5, checksLoaded = false;
+    let pending = 7, checksLoaded = false;
     const ready = () => { if (pending > 0 && --pending === 0) { state.conn = "ready"; setWritable(); } render(); };
     db.collection("weeks").onSnapshot(s => { state.weeks = rows(s).map(w => ({ ...w, n: +w.n })).sort((a, b) => a.n - b.n); ready(); }, onErr);
     db.collection("activities").orderBy("date", "desc").limit(600).onSnapshot(s => { state.acts = rows(s); ready(); }, onErr);
     db.collection("checkins").orderBy("date", "desc").limit(250).onSnapshot(s => { state.checks = rows(s); if (!checksLoaded) { checksLoaded = true; fillCheck(); } ready(); }, onErr);
     db.collection("reviews").orderBy("date", "desc").limit(5).onSnapshot(s => { state.reviews = rows(s); ready(); }, onErr);
     db.doc("config/main").onSnapshot(s => { state.config = s.exists ? s.data() : null; ready(); }, onErr);
+    db.doc("knowledge/main").onSnapshot(s => { state.knowledge = s.exists ? s.data() : null; ready(); }, onErr);
+    db.collection("qa").orderBy("createdAt", "desc").limit(40).onSnapshot(s => { state.qa = rows(s); renderChat(); ready(); }, onErr);
     setWritable();
   }
 
