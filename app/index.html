@@ -1,0 +1,834 @@
+<title>和気アルプス50K ログ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: field notebook. A race header with a 24-week phase ribbon, then two columns
+   (this week + logging | trends + review) that stack to one on phones.
+   Pink = the trail-marker tape that shows "you are here". */
+:root {
+  --bg: #eef1ed;
+  --surface: #fafbf9;
+  --ink: #16201b;
+  --ink-2: #47524c;
+  --muted: #76817b;
+  --line: #d9dfda;
+  --accent: #1d6551;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcebe4;
+  --tape: #d93a74;
+  --warn: #9a5b00;
+  --warn-bg: #fbefd8;
+  --crit: #b3261e;
+  --crit-bg: #fbe4e1;
+  --ok: #2b6e3a;
+  --ok-bg: #e2f0e4;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --band: #dde3de;
+  --grid: #e3e7e3;
+  --ph-rec: #c8cfca;
+  --ph-base: #9ec8b7;
+  --ph-build: #4e9a7f;
+  --ph-spec: #1d6551;
+  --ph-taper: #bcdacd;
+  --font-display: "Dela Gothic One", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --surface: #181d1a; --ink: #e8ede9; --ink-2: #b3bcb6; --muted: #88928c;
+    --line: #2a312d; --accent: #63c3a3; --accent-ink: #0c1612; --accent-soft: #1f3a31;
+    --tape: #f0709c; --warn: #f2b24c; --warn-bg: #36290f; --crit: #ff8a80; --crit-bg: #3b1916;
+    --ok: #7fd08e; --ok-bg: #19301d; --s1: #3987e5; --s2: #d95926; --band: #29302c; --grid: #232a26;
+    --ph-rec: #3a423d; --ph-base: #2e5a4a; --ph-build: #3f8a70; --ph-spec: #63c3a3; --ph-taper: #2a463c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --surface: #181d1a; --ink: #e8ede9; --ink-2: #b3bcb6; --muted: #88928c;
+  --line: #2a312d; --accent: #63c3a3; --accent-ink: #0c1612; --accent-soft: #1f3a31;
+  --tape: #f0709c; --warn: #f2b24c; --warn-bg: #36290f; --crit: #ff8a80; --crit-bg: #3b1916;
+  --ok: #7fd08e; --ok-bg: #19301d; --s1: #3987e5; --s2: #d95926; --band: #29302c; --grid: #232a26;
+  --ph-rec: #3a423d; --ph-base: #2e5a4a; --ph-build: #3f8a70; --ph-spec: #63c3a3; --ph-taper: #2a463c;
+  color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 56px; display: grid; gap: 20px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h2 { font-size: 1rem; font-weight: 700; letter-spacing: .02em; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+.top { display: grid; gap: 12px; }
+.eyebrow { font-size: .78rem; letter-spacing: .08em; color: var(--ink-2); }
+.titlerow { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 20px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.6rem, 5vw, 2.3rem); line-height: 1.15; }
+.count { display: flex; align-items: baseline; gap: 6px; }
+.count .big { font-family: var(--font-display); font-size: clamp(2rem, 7vw, 2.8rem); line-height: 1; }
+.count .unit { color: var(--ink-2); }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--ink-2); font-size: .88rem; }
+.facts b { color: var(--ink); font-weight: 700; }
+
+.ribbon { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; }
+.cell { appearance: none; border: 0; padding: 0; height: 22px; border-radius: 3px; cursor: pointer; position: relative; background: var(--ph-rec); }
+.cell[data-ph="基礎"] { background: var(--ph-base); }
+.cell[data-ph="強化"] { background: var(--ph-build); }
+.cell[data-ph="特異"] { background: var(--ph-spec); }
+.cell[data-ph="テーパー"] { background: var(--ph-taper); }
+.cell[data-ph="レース"] { background: var(--tape); }
+.cell[aria-current="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); z-index: 1; }
+.cell.now::after { content: ""; position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); border: 5px solid transparent; border-top: 6px solid var(--tape); border-bottom: 0; }
+.ribbon-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; font-size: .78rem; color: var(--ink-2); margin-top: 6px; }
+.keys { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.key { display: inline-flex; align-items: center; gap: 5px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* alerts */
+.alerts { display: grid; gap: 8px; }
+.alert { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; font-size: .92rem; }
+.alert .ic { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .8rem; color: var(--surface); }
+.alert.warn { background: var(--warn-bg); } .alert.warn .ic { background: var(--warn); }
+.alert.crit { background: var(--crit-bg); } .alert.crit .ic { background: var(--crit); }
+.alert.ok { background: var(--ok-bg); } .alert.ok .ic { background: var(--ok); }
+.alert b { font-weight: 700; }
+.alert .lvl { font-size: .74rem; font-weight: 700; margin-right: 8px; letter-spacing: .04em; }
+.alert.warn .lvl { color: var(--warn); } .alert.crit .lvl { color: var(--crit); }
+
+/* columns */
+.cols { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 900px) { .cols { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); } }
+.col { display: grid; gap: 20px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sub { color: var(--ink-2); font-size: .85rem; }
+.weeknav { display: flex; gap: 4px; }
+.iconbtn { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; width: 32px; height: 30px; cursor: pointer; }
+.iconbtn:disabled { opacity: .4; cursor: default; }
+
+/* meters */
+.meters { display: grid; gap: 12px; }
+.meter { display: grid; gap: 4px; }
+.meter-top { display: flex; justify-content: space-between; gap: 8px; font-size: .88rem; }
+.meter-top .lbl { color: var(--ink-2); }
+.track { position: relative; height: 10px; background: var(--grid); border-radius: 5px; overflow: hidden; }
+.track .bandz { position: absolute; top: 0; bottom: 0; background: var(--band); outline: 1px solid var(--muted); outline-offset: -1px; }
+.track .fill { position: absolute; left: 0; top: 2px; bottom: 2px; background: var(--s1); border-radius: 0 4px 4px 0; }
+.pill { font-size: .72rem; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.idle { background: var(--grid); color: var(--ink-2); }
+.capline { font-size: .88rem; color: var(--ink-2); border-top: 1px dashed var(--line); padding-top: 10px; }
+.capline b { color: var(--ink); }
+
+/* sessions */
+.sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sessions li { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; }
+.day { font-weight: 700; font-size: .8rem; text-align: center; padding: 2px 0; border-radius: 4px; background: var(--accent-soft); color: var(--accent); height: fit-content; }
+.sessions .t { font-weight: 500; }
+.sessions .d { color: var(--ink-2); font-size: .86rem; }
+.note { font-size: .86rem; color: var(--ink-2); background: var(--grid); border-radius: 6px; padding: 8px 10px; }
+
+/* forms */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { appearance: none; border: 0; background: none; padding: 8px 12px; cursor: pointer; color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+form { display: grid; gap: 12px; }
+.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > label, .field > .flabel { font-size: .8rem; color: var(--ink-2); }
+input[type="text"], input[type="number"], input[type="date"], textarea {
+  width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 8px 10px; min-height: 40px;
+}
+textarea { min-height: 64px; resize: vertical; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { appearance: none; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 10px; cursor: pointer; min-height: 36px; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.rangef { display: grid; grid-template-columns: minmax(0, 1fr) 2.6em; align-items: center; gap: 10px; }
+.rangef output { font-family: var(--font-num); text-align: right; font-size: 1.05rem; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.hint { font-size: .76rem; color: var(--muted); }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+details[open] { padding-bottom: 12px; }
+summary { cursor: pointer; color: var(--ink-2); font-size: .9rem; }
+details > .row, details > .field { margin-top: 10px; }
+.actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.primary { appearance: none; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 700; padding: 10px 20px; border-radius: 8px; cursor: pointer; min-height: 44px; }
+.primary:disabled { opacity: .5; cursor: default; }
+.formmsg { font-size: .85rem; color: var(--ink-2); }
+
+/* charts */
+.chart { position: relative; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font-family: var(--font-num); font-size: 10px; }
+.chart .gridl { stroke: var(--grid); stroke-width: 1; }
+.chart .base { stroke: var(--line); stroke-width: 1; }
+.chart .band { fill: var(--band); }
+.chart .bar { fill: var(--s1); }
+.chart .bar.over { fill: var(--s2); }
+.chart .nowmark { fill: var(--tape); }
+.chart .l1 { stroke: var(--s1); fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .l2 { stroke: var(--s2); fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .d1 { fill: var(--s1); stroke: var(--surface); stroke-width: 2; }
+.chart .d2 { fill: var(--s2); stroke: var(--surface); stroke-width: 2; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart .hit:hover, .chart .hit.on { fill: var(--ink); fill-opacity: .05; }
+.chart .endlbl { fill: var(--ink-2); font-size: 11px; }
+.chart .empty { fill: var(--muted); font-family: var(--font-body); font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: var(--ink-2); }
+.legend .sw.bar { background: var(--s1); }
+.legend .sw.band { background: var(--band); outline: 1px solid var(--muted); outline-offset: -1px; }
+.legend .sw.over { background: var(--s2); }
+.legend .ln { width: 14px; height: 2px; display: inline-block; border-radius: 1px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .78rem; line-height: 1.45; padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, calc(-100% - 8px)); z-index: 3; }
+
+/* lists */
+.list { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.tablewrap { overflow-x: auto; }
+.list th { text-align: left; font-weight: 500; color: var(--muted); font-size: .76rem; padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.list td { padding: 7px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; vertical-align: top; }
+.list td.r, .list th.r { text-align: right; }
+.list td.memo { white-space: normal; color: var(--ink-2); min-width: 8em; }
+.kind { font-size: .74rem; padding: 1px 7px; border-radius: 4px; background: var(--grid); }
+.del { appearance: none; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; font-size: .8rem; }
+.del.confirm { color: var(--crit); font-weight: 700; }
+.flag { color: var(--warn); font-weight: 700; }
+.empty-state { color: var(--ink-2); font-size: .9rem; padding: 6px 0; }
+
+.review-body { white-space: pre-wrap; font-size: .92rem; line-height: 1.75; }
+.review-meta { font-size: .8rem; color: var(--muted); }
+
+.status { font-size: .8rem; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: .9rem; z-index: 10; }
+@media (prefers-reduced-motion: no-preference) { .toast { transition: opacity .2s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">WAKE ALPS TRAIL 2027 ・ ロング 50km ・ 2027年3月22日（月・祝）</div>
+    <div class="titlerow">
+      <h1>和気アルプス50K ログ</h1>
+      <div class="count"><span class="unit">レースまで</span><span class="big num" id="days">—</span><span class="unit">日</span></div>
+    </div>
+    <div class="facts" id="facts">
+      <span>今日 <b class="num" id="today">—</b></span>
+      <span>週 <b id="nowweek">—</b></span>
+      <span>目標タイム <b id="target">リザルト確認後に設定</b></span>
+    </div>
+    <div>
+      <div class="ribbon" id="ribbon" role="group" aria-label="24週の計画。押すとその週を表示"></div>
+      <div class="ribbon-meta">
+        <div class="keys">
+          <span class="key"><span class="sw" style="background:var(--ph-rec)"></span>回復</span>
+          <span class="key"><span class="sw" style="background:var(--ph-base)"></span>基礎</span>
+          <span class="key"><span class="sw" style="background:var(--ph-build)"></span>強化</span>
+          <span class="key"><span class="sw" style="background:var(--ph-spec)"></span>特異</span>
+          <span class="key"><span class="sw" style="background:var(--ph-taper)"></span>テーパー</span>
+          <span class="key"><span class="sw" style="background:var(--tape)"></span>レース</span>
+        </div>
+        <span>▼ ピンクのテープが今週</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="alerts" id="alerts" aria-live="polite"></section>
+
+  <div class="cols">
+    <div class="col">
+      <section class="panel" aria-labelledby="wk-h">
+        <div class="panel-head">
+          <div>
+            <h2 id="wk-h">今週の計画</h2>
+            <div class="sub" id="wk-sub">—</div>
+          </div>
+          <div class="weeknav">
+            <button class="iconbtn" id="prevw" aria-label="前の週">‹</button>
+            <button class="iconbtn" id="nextw" aria-label="次の週">›</button>
+          </div>
+        </div>
+        <div class="meters" id="meters"></div>
+        <ul class="sessions" id="sessions"></ul>
+        <div class="capline" id="capline"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="log-h">
+        <div class="panel-head">
+          <h2 id="log-h">記録する</h2>
+          <span class="status" id="dbstatus">接続中…</span>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="tab-act" aria-selected="true" aria-controls="form-act">練習</button>
+          <button class="tab" role="tab" id="tab-chk" aria-selected="false" aria-controls="form-chk">体調</button>
+        </div>
+
+        <form id="form-act" role="tabpanel" aria-labelledby="tab-act" novalidate>
+          <div class="row">
+            <div class="field"><label for="a-date">日付</label><input type="date" id="a-date" required></div>
+            <div class="field"><label for="a-min">時間（1:45 または 分）</label><input type="text" id="a-min" inputmode="numeric" placeholder="1:45" autocomplete="off"></div>
+          </div>
+          <div class="field">
+            <span class="flabel" id="a-kind-l">種類</span>
+            <div class="seg" id="a-kind" role="radiogroup" aria-labelledby="a-kind-l"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label for="a-km">距離 km</label><input type="number" id="a-km" inputmode="decimal" step="0.1" min="0" placeholder="12.5"></div>
+            <div class="field"><label for="a-dplus">累積標高 m</label><input type="number" id="a-dplus" inputmode="numeric" step="10" min="0" placeholder="650"></div>
+            <div class="field"><label for="a-hr">平均心拍</label><input type="number" id="a-hr" inputmode="numeric" min="40" max="220" placeholder="138"></div>
+          </div>
+          <div class="field">
+            <label for="a-rpe">きつさ（1 楽 〜 10 限界）</label>
+            <div class="rangef"><input type="range" id="a-rpe" min="1" max="10" value="4"><output id="a-rpe-o" for="a-rpe">4</output></div>
+          </div>
+          <details id="a-fuel">
+            <summary>補給（ロング走・模擬レースのとき）</summary>
+            <div class="row">
+              <div class="field"><label for="a-carbs">炭水化物 合計 g</label><input type="number" id="a-carbs" inputmode="numeric" min="0" placeholder="180"></div>
+              <div class="field"><label for="a-fluid">水分 合計 ml</label><input type="number" id="a-fluid" inputmode="numeric" min="0" step="50" placeholder="1500"></div>
+            </div>
+            <div class="field">
+              <span class="flabel" id="a-gi-l">胃腸の調子</span>
+              <div class="seg" id="a-gi" role="radiogroup" aria-labelledby="a-gi-l"></div>
+            </div>
+            <div class="hint" id="a-gph">時間と炭水化物を入れると g/時 を計算します</div>
+          </details>
+          <div class="field"><label for="a-note">メモ</label><textarea id="a-note" placeholder="例：里山5本。4本目の下りで右膝の外側に違和感"></textarea></div>
+          <div class="actions"><button class="primary" type="submit" id="a-save">記録する</button><span class="formmsg" id="a-msg"></span></div>
+        </form>
+
+        <form id="form-chk" role="tabpanel" aria-labelledby="tab-chk" hidden novalidate>
+          <div class="row">
+            <div class="field"><label for="c-date">日付</label><input type="date" id="c-date" required></div>
+            <div class="field"><label for="c-sleep">睡眠 時間</label><input type="number" id="c-sleep" inputmode="decimal" step="0.5" min="0" max="14" placeholder="6.5"></div>
+            <div class="field"><label for="c-rhr">安静時心拍</label><input type="number" id="c-rhr" inputmode="numeric" min="30" max="120" placeholder="52"></div>
+          </div>
+          <div class="field">
+            <span class="flabel" id="c-fat-l">全身の疲れ（1 元気 〜 5 ぐったり）</span>
+            <div class="seg" id="c-fat" role="radiogroup" aria-labelledby="c-fat-l"></div>
+          </div>
+          <div class="field">
+            <label for="c-quad">太もも前の張り・痛み（0 なし 〜 10 歩けない）</label>
+            <div class="rangef"><input type="range" id="c-quad" min="0" max="10" value="0"><output id="c-quad-o" for="c-quad">0</output></div>
+          </div>
+          <div class="field">
+            <label for="c-knee">膝の痛み（0 なし 〜 10 歩けない）</label>
+            <div class="rangef"><input type="range" id="c-knee" min="0" max="10" value="0"><output id="c-knee-o" for="c-knee">0</output></div>
+          </div>
+          <div class="field">
+            <span class="flabel" id="c-where-l">膝のどこが痛む？（複数可）</span>
+            <div class="seg" id="c-where" aria-labelledby="c-where-l"></div>
+          </div>
+          <div class="field"><label for="c-note">メモ</label><textarea id="c-note" placeholder="例：階段の下りで右膝のお皿の下が痛む"></textarea></div>
+          <div class="actions"><button class="primary" type="submit" id="c-save">保存する</button><span class="formmsg" id="c-msg"></span></div>
+        </form>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="ch1-h">
+        <div class="panel-head"><h2 id="ch1-h">週の時間</h2><span class="sub">時間（h）</span></div>
+        <div class="legend"><span class="key"><span class="sw bar"></span>実績</span><span class="key"><span class="sw over"></span>計画の上限+15%超</span><span class="key"><span class="sw band"></span>計画の幅</span></div>
+        <div class="chart" id="ch-hours"></div>
+      </section>
+      <section class="panel" aria-labelledby="ch2-h">
+        <div class="panel-head"><h2 id="ch2-h">週の累積標高</h2><span class="sub">D+（m）</span></div>
+        <div class="legend"><span class="key"><span class="sw bar"></span>実績</span><span class="key"><span class="sw over"></span>計画の上限+15%超</span><span class="key"><span class="sw band"></span>計画の幅</span></div>
+        <div class="chart" id="ch-dplus"></div>
+      </section>
+      <section class="panel" aria-labelledby="ch3-h">
+        <div class="panel-head"><h2 id="ch3-h">太もも前と膝</h2><span class="sub">直近6週・0〜10</span></div>
+        <div class="legend"><span class="key"><span class="ln" style="background:var(--s1)"></span>太もも前</span><span class="key"><span class="ln" style="background:var(--s2)"></span>膝</span></div>
+        <div class="chart" id="ch-sore"></div>
+      </section>
+      <section class="panel" aria-labelledby="rv-h">
+        <div class="panel-head"><h2 id="rv-h">Claudeの週次レビュー</h2><span class="review-meta" id="rv-meta"></span></div>
+        <div id="review" class="review-body"></div>
+        <p class="hint">週末に Claude へ「今週のレビューをして」と頼むと、ここの記録を読んで来週の計画を見直します。</p>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel" aria-labelledby="rc-h">
+    <div class="panel-head"><h2 id="rc-h">最近の練習</h2><span class="sub">直近20件</span></div>
+    <div class="tablewrap" id="recent"></div>
+  </section>
+  <section class="panel" aria-labelledby="ck-h">
+    <div class="panel-head"><h2 id="ck-h">最近の体調</h2><span class="sub">直近10日</span></div>
+    <div class="tablewrap" id="checks"></div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+  const PLAN_START = "2026-10-05";
+  const RACE_DEFAULT = "2027-03-22";
+  const KINDS = [
+    { k: "trail", l: "トレイル" }, { k: "hill", l: "里山" }, { k: "road", l: "ロード" },
+    { k: "hike", l: "ハイク" }, { k: "strength", l: "筋トレ" }, { k: "other", l: "その他" },
+  ];
+  const KIND_LABEL = Object.fromEntries(KINDS.map(x => [x.k, x.l]));
+  const RUN = new Set(["trail", "hill", "road", "hike"]);
+  const WHERE = ["お皿のまわり", "外側", "内側", "裏"];
+  const GI = [{ v: 0, l: "0 問題なし" }, { v: 1, l: "1 少し" }, { v: 2, l: "2 つらい" }, { v: 3, l: "3 吐いた・止まった" }];
+
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2, "0");
+  const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const dnum = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+  const addDays = (s, n) => new Date((dnum(s) + n) * 864e5).toISOString().slice(0, 10);
+  const weekOf = s => Math.floor((dnum(s) - dnum(PLAN_START)) / 7) + 1;
+  const md = s => `${+s.slice(5, 7)}/${+s.slice(8, 10)}`;
+  const fmtMin = m => (m == null || isNaN(m)) ? "—" : `${Math.floor(m / 60)}:${pad(Math.round(m % 60))}`;
+  const fmtH = h => (Math.round(h * 10) / 10).toFixed(1);
+  const rng = a => !a ? "—" : (a[0] === a[1] ? `${a[0]}` : `${a[0]}〜${a[1]}`);
+  const numOrNull = v => { if (v === "" || v == null) return null; const n = Number(v); return isFinite(n) ? n : null; };
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function parseDur(s) {
+    s = String(s || "").trim().replace("：", ":");
+    let m = s.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (m) return +m[1] * 60 + +m[2];
+    m = s.match(/^(\d+(?:\.\d+)?)\s*h$/i);
+    if (m) return Math.round(+m[1] * 60);
+    if (/^\d+$/.test(s)) return +s;
+    return null;
+  }
+
+  const state = { weeks: [], acts: [], checks: [], reviews: [], config: null, db: null, canWrite: true, selWeek: null, conn: "loading" };
+  const today = todayStr();
+  const nowWeek = Math.min(Math.max(weekOf(today), 1), 24);
+  state.selWeek = nowWeek;
+
+  /* ---------- derived ---------- */
+  const weekDoc = n => state.weeks.find(w => w.n === n) || null;
+  function weekAgg(n) {
+    let min = 0, dplus = 0, km = 0, long = 0, count = 0;
+    for (const a of state.acts) {
+      if (!RUN.has(a.kind) || weekOf(a.date) !== n) continue;
+      min += a.min || 0; dplus += a.dplus || 0; km += a.km || 0; long = Math.max(long, a.min || 0); count++;
+    }
+    return { h: min / 60, dplus, km, longH: long / 60, ke: km + dplus / 100, count };
+  }
+  function priorMax(date, inclusive) {
+    const hi = dnum(date), lo = hi - 30 + (inclusive ? 1 : 0);
+    let best = null;
+    for (const a of state.acts) {
+      if (!RUN.has(a.kind) || !a.min) continue;
+      const x = dnum(a.date);
+      if (x >= lo && (inclusive ? x <= hi : x < hi) && (!best || a.min > best.min)) best = a;
+    }
+    return best;
+  }
+  function spikeOf(a) {
+    if (!RUN.has(a.kind) || !a.min || a.min < 60) return null;
+    const p = priorMax(a.date, false);
+    if (!p || a.min <= p.min * 1.1) return null;
+    return { ratio: a.min / p.min, prior: p };
+  }
+  function streak(field, thr, need) {
+    // consecutive calendar days (most recent within the last 7 days) where field >= thr
+    const byDate = new Map(state.checks.map(c => [c.date, c]));
+    for (let start = 0; start < 7; start++) {
+      let ok = true;
+      for (let i = 0; i < need; i++) {
+        const c = byDate.get(addDays(today, -(start + i)));
+        if (!c || c[field] == null || c[field] < thr) { ok = false; break; }
+      }
+      if (ok) return addDays(today, -start);
+    }
+    return null;
+  }
+  function alerts() {
+    const out = [];
+    const k = streak("knee", 3, 2);
+    if (k) out.push({ lv: "crit", t: `<b>膝の痛みが2日続けて3以上</b>（${md(k)}まで）。強い練習と下りを休み、Claude に相談してください。痛みが引かなければ整形外科へ。` });
+    const q = streak("quad", 5, 3);
+    if (q) out.push({ lv: "warn", t: `<b>太もも前の張りが3日続けて5以上</b>。回復が追いついていません。次の里山は本数を減らしましょう。` });
+    const f = streak("fatigue", 4, 3);
+    if (f) out.push({ lv: "warn", t: `<b>疲労が3日続けて4以上</b>。今週は量を計画の下限に寄せましょう。` });
+    for (const a of state.acts) {
+      if (dnum(a.date) < dnum(today) - 13) continue;
+      const s = spikeOf(a);
+      if (s) out.push({ lv: "warn", t: `<b>${md(a.date)}の ${fmtMin(a.min)} は、直近30日の最長（${md(s.prior.date)}・${fmtMin(s.prior.min)}）の ${s.ratio.toFixed(2)}倍</b>。1.1倍以内が目安です。` });
+    }
+    const w = weekDoc(nowWeek), g = weekAgg(nowWeek);
+    if (w && w.hours && g.h > w.hours[1] * 1.15) out.push({ lv: "warn", t: `<b>今週の時間が計画の上限を15%以上超えています</b>（${fmtH(g.h)}h ／ 計画 ${rng(w.hours)}h）。` });
+    return out;
+  }
+
+  /* ---------- render ---------- */
+  let raf = 0;
+  const render = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderAll(); }); };
+
+  function renderAll() {
+    const race = (state.config && state.config.raceDate) || RACE_DEFAULT;
+    $("days").textContent = Math.max(0, dnum(race) - dnum(today));
+    $("today").textContent = md(today);
+    const nw = weekDoc(nowWeek);
+    $("nowweek").textContent = `W${nowWeek}/24${nw ? "・" + nw.phase : ""}`;
+    if (state.config && state.config.targetTime) $("target").textContent = state.config.targetTime;
+    renderRibbon(); renderAlerts(); renderWeek(); renderCharts(); renderRecent(); renderChecks(); renderReview();
+  }
+
+  function renderRibbon() {
+    const r = $("ribbon");
+    if (!r.childElementCount) {
+      for (let n = 1; n <= 24; n++) {
+        const b = document.createElement("button");
+        b.className = "cell"; b.type = "button"; b.dataset.n = n;
+        b.addEventListener("click", () => { state.selWeek = n; render(); });
+        r.appendChild(b);
+      }
+    }
+    [...r.children].forEach(b => {
+      const n = +b.dataset.n, w = weekDoc(n);
+      b.dataset.ph = w ? w.phase : "";
+      b.classList.toggle("now", n === nowWeek);
+      b.setAttribute("aria-current", n === state.selWeek ? "true" : "false");
+      b.setAttribute("aria-label", `W${n}${w ? " " + w.phase + " " + md(w.start) + "から" : ""}`);
+      b.title = w ? `W${n} ${md(w.start)}〜 ${w.phase}` : `W${n}`;
+    });
+  }
+
+  function renderAlerts() {
+    const box = $("alerts");
+    if (state.conn !== "ready") { box.innerHTML = ""; return; }
+    const list = alerts();
+    if (!list.length) {
+      box.innerHTML = `<div class="alert ok"><span class="ic" aria-hidden="true">✓</span><div><b>注意することはありません。</b>計画どおりに進めましょう。</div></div>`;
+      return;
+    }
+    box.innerHTML = list.map(a => `<div class="alert ${a.lv}"><span class="ic" aria-hidden="true">!</span><div><span class="lvl">${a.lv === "crit" ? "要対応" : "注意"}</span>${a.t}</div></div>`).join("");
+  }
+
+  function meter(label, actual, range, fmt, unit) {
+    const hi = range ? range[1] : 0;
+    const max = Math.max(hi * 1.3, actual * 1.05, 0.0001);
+    const pct = v => Math.min(100, (v / max) * 100);
+    let pill = `<span class="pill idle">記録なし</span>`;
+    if (actual > 0 && range) {
+      if (actual > hi * 1.15) pill = `<span class="pill warn">多すぎ</span>`;
+      else if (actual >= range[0]) pill = `<span class="pill ok">計画どおり</span>`;
+      else pill = `<span class="pill idle">あと ${fmt(range[0] - actual)}${unit}</span>`;
+    } else if (actual > 0) pill = "";
+    return `<div class="meter">
+      <div class="meter-top"><span class="lbl">${label}</span><span><span class="num">${fmt(actual)}</span> <span class="sub">／ 計画 ${rng(range)}${unit}</span> ${pill}</span></div>
+      <div class="track" role="img" aria-label="${label} 実績 ${fmt(actual)}${unit}、計画 ${rng(range)}${unit}">
+        ${range ? `<div class="bandz" style="left:${pct(range[0])}%;width:${Math.max(1, pct(range[1]) - pct(range[0]))}%"></div>` : ""}
+        <div class="fill" style="width:${pct(actual)}%"></div>
+      </div></div>`;
+  }
+
+  function renderWeek() {
+    const n = state.selWeek, w = weekDoc(n), g = weekAgg(n);
+    $("prevw").disabled = n <= 1; $("nextw").disabled = n >= 24;
+    $("wk-h").textContent = n === nowWeek ? `今週の計画（W${n}）` : `W${n} の計画`;
+    if (!w) {
+      $("wk-sub").textContent = state.conn === "ready" ? "この週の計画はまだありません" : "計画を読み込んでいます";
+      $("meters").innerHTML = "";
+      $("sessions").innerHTML = `<li class="empty-state" style="display:block">計画は Claude が週次レビューのときに書き込みます。</li>`;
+    } else {
+      $("wk-sub").textContent = `${md(w.start)}〜${md(w.end)}・${w.phase}${w.focus ? "・" + w.focus : ""}`;
+      $("meters").innerHTML =
+        meter("週の時間", g.h, w.hours, fmtH, "h") +
+        meter("累積標高", g.dplus, w.dplus, v => Math.round(v).toLocaleString(), "m") +
+        meter("最長の1回", g.longH, w.long, fmtH, "h") +
+        `<div class="meter-top"><span class="lbl">距離・km-effort</span><span class="num">${fmtH(g.km)}km ・ ${fmtH(g.ke)}</span></div>`;
+      $("sessions").innerHTML = (w.sessions || []).map(s =>
+        `<li><span class="day">${esc(s.day)}</span><div><div class="t">${esc(s.title)}</div>${s.detail ? `<div class="d">${esc(s.detail)}</div>` : ""}</div></li>`).join("")
+        + (w.note ? `<li style="display:block"><div class="note">${esc(w.note)}</div></li>` : "");
+    }
+    const p = priorMax(today, true);
+    $("capline").innerHTML = p
+      ? `直近30日の最長は <b class="num">${fmtMin(p.min)}</b>（${md(p.date)}）。次のロングは <b class="num">${fmtMin(p.min * 1.1)}</b> までが目安です。`
+      : `直近30日の練習記録がまだありません。最初のロングは無理のない長さで。`;
+  }
+
+  /* ---------- charts ---------- */
+  const NS = "http://www.w3.org/2000/svg";
+  const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+  function niceMax(v, step) { return Math.max(step, Math.ceil(v / step) * step); }
+  function tipShow(box, x, y, html) {
+    let t = box.querySelector(".tip");
+    if (!t) { t = document.createElement("div"); t.className = "tip"; box.appendChild(t); }
+    t.innerHTML = html; t.style.left = x + "px"; t.style.top = y + "px"; t.hidden = false;
+    const bw = box.clientWidth, tw = t.offsetWidth;
+    t.style.left = Math.min(Math.max(x, tw / 2), bw - tw / 2) + "px";
+  }
+  function tipHide(box) { const t = box.querySelector(".tip"); if (t) t.hidden = true; }
+
+  function weeklyChart(box, key, unitLabel, fmt, step) {
+    const W = Math.max(280, box.clientWidth || 320), H = 170, L = 34, R = 6, T = 8, B = 24;
+    const pw = W - L - R, ph = H - T - B, slot = pw / 24;
+    const data = [];
+    let vmax = 0;
+    for (let n = 1; n <= 24; n++) {
+      const w = weekDoc(n), g = weekAgg(n);
+      const target = w ? w[key === "h" ? "hours" : "dplus"] : null;
+      const actual = n <= nowWeek ? g[key] : null;
+      data.push({ n, w, target, actual });
+      vmax = Math.max(vmax, target ? target[1] : 0, actual || 0);
+    }
+    const ymax = niceMax(vmax || step, step);
+    const y = v => T + ph - (v / ymax) * ph;
+    const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `週ごとの${unitLabel}。実績と計画の幅` });
+    for (let v = 0; v <= ymax; v += step) {
+      svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: v === 0 ? "base" : "gridl" }));
+      const t = svgEl("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end" }); t.textContent = fmt(v); svg.appendChild(t);
+    }
+    const bw = Math.min(24, slot * 0.56), rw = Math.min(30, slot * 0.86);
+    let any = false;
+    data.forEach(d => {
+      const cx = L + slot * (d.n - 0.5);
+      if (d.target) svg.appendChild(svgEl("rect", { x: cx - rw / 2, y: y(d.target[1]), width: rw, height: Math.max(2, y(d.target[0]) - y(d.target[1])), class: "band", rx: 2 }));
+      if (d.actual > 0) {
+        any = true;
+        const top = y(d.actual), bot = y(0), r = Math.min(4, bw / 2, bot - top), x0 = cx - bw / 2, x1 = cx + bw / 2;
+        const over = d.target && d.actual > d.target[1] * 1.15;
+        svg.appendChild(svgEl("path", { d: `M${x0},${bot}V${top + r}Q${x0},${top} ${x0 + r},${top}H${x1 - r}Q${x1},${top} ${x1},${top + r}V${bot}Z`, class: over ? "bar over" : "bar" }));
+      }
+      if (d.n === 1 || d.n % 4 === 0 || d.n === nowWeek) {
+        const t = svgEl("text", { x: cx, y: H - 8, "text-anchor": "middle" }); t.textContent = `W${d.n}`; svg.appendChild(t);
+      }
+      if (d.n === nowWeek) svg.appendChild(svgEl("path", { d: `M${cx - 4},${H - 2}L${cx + 4},${H - 2}L${cx},${H - 6}Z`, class: "nowmark" }));
+      const hit = svgEl("rect", { x: cx - slot / 2, y: T, width: slot, height: ph, class: "hit" });
+      const show = () => {
+        box.querySelectorAll(".hit.on").forEach(e => e.classList.remove("on")); hit.classList.add("on");
+        const a = d.actual > 0 ? fmt(d.actual) : "—";
+        tipShow(box, (cx / W) * box.clientWidth, (y(Math.max(d.actual || 0, d.target ? d.target[1] : 0)) / H) * box.clientHeight,
+          `W${d.n}${d.w ? " " + md(d.w.start) + "〜・" + d.w.phase : ""}<br>実績 ${a} ／ 計画 ${d.target ? rng(d.target.map(fmt)) : "—"}`);
+      };
+      hit.addEventListener("pointerenter", show); hit.addEventListener("click", () => { show(); state.selWeek = d.n; render(); });
+      hit.addEventListener("pointerleave", () => { hit.classList.remove("on"); tipHide(box); });
+      svg.appendChild(hit);
+    });
+    if (!any && !data.some(d => d.target)) {
+      const t = svgEl("text", { x: L + pw / 2, y: T + ph / 2, "text-anchor": "middle", class: "empty" });
+      t.textContent = "練習を記録すると、週ごとの実績がここに出ます"; svg.appendChild(t);
+    }
+    box.replaceChildren(svg);
+  }
+
+  function soreChart(box) {
+    const W = Math.max(280, box.clientWidth || 320), H = 150, L = 26, R = 30, T = 8, B = 22;
+    const pw = W - L - R, ph = H - T - B, days = 42, start = addDays(today, -(days - 1));
+    const x = s => L + ((dnum(s) - dnum(start)) / (days - 1)) * pw;
+    const y = v => T + ph - (v / 10) * ph;
+    const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "直近6週の太もも前と膝の痛みの推移" });
+    [0, 5, 10].forEach(v => {
+      svg.appendChild(svgEl("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: v === 0 ? "base" : "gridl" }));
+      const t = svgEl("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end" }); t.textContent = v; svg.appendChild(t);
+    });
+    for (let i = 0; i < days; i += 14) {
+      const s = addDays(start, i), t = svgEl("text", { x: x(s), y: H - 6, "text-anchor": "middle" }); t.textContent = md(s); svg.appendChild(t);
+    }
+    const tt = svgEl("text", { x: x(today), y: H - 6, "text-anchor": "end" }); tt.textContent = "今日"; svg.appendChild(tt);
+    const pts = state.checks.filter(c => dnum(c.date) >= dnum(start) && dnum(c.date) <= dnum(today)).sort((a, b) => dnum(a.date) - dnum(b.date));
+    const ends = [];
+    [["quad", "l1", "d1"], ["knee", "l2", "d2"]].forEach(([f, lc, dc]) => {
+      const p = pts.filter(c => c[f] != null);
+      let d = "", prev = null;
+      p.forEach(c => { const gap = !prev || dnum(c.date) - dnum(prev.date) > 1; d += `${gap ? "M" : "L"}${x(c.date).toFixed(1)},${y(c[f]).toFixed(1)}`; prev = c; });
+      if (d) svg.appendChild(svgEl("path", { d, class: lc }));
+      p.forEach((c, i) => {
+        const solo = (i === 0 || dnum(c.date) - dnum(p[i - 1].date) > 1) && (i === p.length - 1 || dnum(p[i + 1].date) - dnum(c.date) > 1);
+        if (solo || i === p.length - 1) svg.appendChild(svgEl("circle", { cx: x(c.date), cy: y(c[f]), r: 4, class: dc }));
+      });
+      if (p.length) ends.push({ f, c: p[p.length - 1] });
+    });
+    if (ends.length === 2 && Math.abs(y(ends[0].c[ends[0].f]) - y(ends[1].c[ends[1].f])) >= 12 || ends.length === 1) {
+      ends.forEach(e => { const t = svgEl("text", { x: x(e.c.date) + 8, y: y(e.c[e.f]) + 4, class: "endlbl" }); t.textContent = e.c[e.f]; svg.appendChild(t); });
+    }
+    if (!pts.length) {
+      const t = svgEl("text", { x: L + pw / 2, y: T + ph / 2, "text-anchor": "middle", class: "empty" });
+      t.textContent = "「体調」を記録すると推移がここに出ます"; svg.appendChild(t);
+    }
+    const slot = pw / (days - 1);
+    for (let i = 0; i < days; i++) {
+      const s = addDays(start, i), c = pts.find(p => p.date === s);
+      if (!c) continue;
+      const hit = svgEl("rect", { x: x(s) - slot / 2, y: T, width: slot, height: ph, class: "hit" });
+      const show = () => tipShow(box, (x(s) / W) * box.clientWidth, (T / H) * box.clientHeight + 12, `${md(s)}<br>太もも前 ${c.quad ?? "—"} ／ 膝 ${c.knee ?? "—"}${c.where && c.where.length ? "（" + esc(c.where.join("・")) + "）" : ""}`);
+      hit.addEventListener("pointerenter", show); hit.addEventListener("click", show);
+      hit.addEventListener("pointerleave", () => tipHide(box));
+      svg.appendChild(hit);
+    }
+    box.replaceChildren(svg);
+  }
+
+  function renderCharts() {
+    weeklyChart($("ch-hours"), "h", "時間", v => (Math.round(v * 10) / 10).toString(), 2);
+    weeklyChart($("ch-dplus"), "dplus", "累積標高", v => Math.round(v).toLocaleString(), 1000);
+    soreChart($("ch-sore"));
+  }
+
+  /* ---------- lists ---------- */
+  function renderRecent() {
+    const box = $("recent");
+    const rows = state.acts.slice().sort((a, b) => b.date.localeCompare(a.date) || String(b.createdAt || "").localeCompare(String(a.createdAt || ""))).slice(0, 20);
+    if (!rows.length) { box.innerHTML = `<p class="empty-state">${state.conn === "ready" ? "まだ練習の記録がありません。上の「記録する」から最初の1件を入れてください。" : "読み込み中…"}</p>`; return; }
+    box.innerHTML = `<table class="list"><thead><tr><th>日付</th><th>種類</th><th class="r">時間</th><th class="r">km</th><th class="r">D+</th><th class="r">きつさ</th><th class="r">補給</th><th>メモ</th><th></th></tr></thead><tbody>${rows.map(a => {
+      const s = spikeOf(a), gph = a.carbs && a.min ? Math.round(a.carbs / (a.min / 60)) : null;
+      return `<tr><td class="num">${md(a.date)}</td><td><span class="kind">${esc(KIND_LABEL[a.kind] || a.kind)}</span></td>
+        <td class="r num">${fmtMin(a.min)}${s ? ` <span class="flag" title="直近30日の最長の${s.ratio.toFixed(2)}倍">↑</span>` : ""}</td>
+        <td class="r num">${a.km != null ? fmtH(a.km) : "—"}</td><td class="r num">${a.dplus != null ? Math.round(a.dplus).toLocaleString() : "—"}</td>
+        <td class="r num">${a.rpe ?? "—"}</td><td class="r num">${gph != null ? gph + "g/時" : "—"}</td>
+        <td class="memo">${esc(a.note || "")}</td>
+        <td><button class="del" data-id="${esc(a.id)}" type="button">削除</button></td></tr>`;
+    }).join("")}</tbody></table>`;
+  }
+  function renderChecks() {
+    const box = $("checks");
+    const rows = state.checks.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+    if (!rows.length) { box.innerHTML = `<p class="empty-state">${state.conn === "ready" ? "まだ体調の記録がありません。「体調」タブから入れてください。" : "読み込み中…"}</p>`; return; }
+    box.innerHTML = `<table class="list"><thead><tr><th>日付</th><th class="r">疲れ</th><th class="r">太もも前</th><th class="r">膝</th><th>場所</th><th class="r">睡眠</th><th class="r">安静時心拍</th><th>メモ</th></tr></thead><tbody>${rows.map(c =>
+      `<tr><td class="num">${md(c.date)}</td><td class="r num">${c.fatigue ?? "—"}</td><td class="r num">${c.quad ?? "—"}</td><td class="r num">${c.knee ?? "—"}</td>
+       <td>${esc((c.where || []).join("・")) || "—"}</td><td class="r num">${c.sleep ?? "—"}</td><td class="r num">${c.rhr ?? "—"}</td><td class="memo">${esc(c.note || "")}</td></tr>`).join("")}</tbody></table>`;
+  }
+  function renderReview() {
+    const r = state.reviews.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+    if (!r) { $("review").textContent = state.conn === "ready" ? "まだレビューはありません。" : "読み込み中…"; $("rv-meta").textContent = ""; return; }
+    $("rv-meta").textContent = `${r.title || ""}${r.date ? "・" + md(r.date) : ""}`;
+    $("review").textContent = r.body || "";
+  }
+
+  /* ---------- forms ---------- */
+  function seg(boxId, items, multi, initial) {
+    const box = $(boxId); const sel = new Set(initial == null ? [] : [].concat(initial));
+    box.innerHTML = items.map(it => `<button type="button" data-v="${esc(it.v ?? it.k ?? it)}" ${multi ? "" : 'role="radio"'} aria-pressed="false">${esc(it.l ?? it)}</button>`).join("");
+    const sync = () => box.querySelectorAll("button").forEach(b => { const on = sel.has(b.dataset.v); b.setAttribute("aria-pressed", on); if (!multi) b.setAttribute("aria-checked", on); });
+    box.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      const v = b.dataset.v;
+      if (multi) { sel.has(v) ? sel.delete(v) : sel.add(v); } else { if (sel.has(v)) sel.clear(); else { sel.clear(); sel.add(v); } }
+      sync(); box.dispatchEvent(new Event("change"));
+    });
+    sync();
+    return { get: () => multi ? [...sel] : ([...sel][0] ?? null), set: v => { sel.clear(); [].concat(v ?? []).forEach(x => sel.add(String(x))); sync(); } };
+  }
+  const kindSeg = seg("a-kind", KINDS, false, "trail");
+  const giSeg = seg("a-gi", GI, false, null);
+  const fatSeg = seg("c-fat", [1, 2, 3, 4, 5].map(v => ({ v, l: String(v) })), false, null);
+  const whereSeg = seg("c-where", WHERE.map(v => ({ v, l: v })), true, []);
+  [["a-rpe", "a-rpe-o"], ["c-quad", "c-quad-o"], ["c-knee", "c-knee-o"]].forEach(([i, o]) => $(i).addEventListener("input", () => { $(o).textContent = $(i).value; }));
+  $("a-date").value = today; $("c-date").value = today;
+
+  const updGph = () => {
+    const m = parseDur($("a-min").value), c = numOrNull($("a-carbs").value);
+    $("a-gph").textContent = m && c ? `≈ ${Math.round(c / (m / 60))} g/時` : "時間と炭水化物を入れると g/時 を計算します";
+  };
+  $("a-min").addEventListener("input", updGph); $("a-carbs").addEventListener("input", updGph);
+
+  function fillCheck() {
+    const c = state.checks.find(x => x.date === $("c-date").value);
+    fatSeg.set(c ? c.fatigue : null); whereSeg.set(c ? c.where || [] : []);
+    $("c-quad").value = c && c.quad != null ? c.quad : 0; $("c-quad-o").textContent = $("c-quad").value;
+    $("c-knee").value = c && c.knee != null ? c.knee : 0; $("c-knee-o").textContent = $("c-knee").value;
+    $("c-sleep").value = c && c.sleep != null ? c.sleep : ""; $("c-rhr").value = c && c.rhr != null ? c.rhr : ""; $("c-note").value = c ? c.note || "" : "";
+    $("c-save").textContent = c ? "上書き保存する" : "保存する";
+  }
+  $("c-date").addEventListener("change", fillCheck);
+
+  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+    $("form-act").hidden = t.id !== "tab-act"; $("form-chk").hidden = t.id !== "tab-chk";
+  }));
+
+  let toastT = 0;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2200); }
+  function setWritable() {
+    const ok = !!state.db && state.canWrite;
+    $("a-save").disabled = !ok; $("c-save").disabled = !ok;
+    $("dbstatus").textContent = state.conn === "ready" ? (state.canWrite ? "保存先：このページ" : "閲覧のみ") : state.conn === "offline" ? "保存できません（Claudeのアーティファクトとして開いてください）" : "接続中…";
+  }
+  function writeErr(e, msgEl) {
+    const code = e && e.code;
+    if (code === "invalid_argument" && !state.canWrite) return;
+    if (code === "invalid_argument") { state.canWrite = false; setWritable(); $(msgEl).textContent = "このページには書き込めません（閲覧のみ）。"; return; }
+    if (code === "quota_exceeded") { $(msgEl).textContent = "保存できる件数の上限です。古い記録を消すか、Claude に整理を頼んでください。"; return; }
+    $(msgEl).textContent = "保存できませんでした。通信を確認して、もう一度押してください。";
+  }
+
+  $("form-act").addEventListener("submit", async e => {
+    e.preventDefault(); $("a-msg").textContent = "";
+    const date = $("a-date").value, min = parseDur($("a-min").value), kind = kindSeg.get();
+    if (!date) { $("a-msg").textContent = "日付を入れてください。"; return; }
+    if (!kind) { $("a-msg").textContent = "種類を選んでください。"; return; }
+    if (!min || min <= 0) { $("a-msg").textContent = "時間を「1:45」か分（105）で入れてください。"; $("a-min").focus(); return; }
+    const doc = {
+      date, kind, min, km: numOrNull($("a-km").value), dplus: numOrNull($("a-dplus").value), hr: numOrNull($("a-hr").value),
+      rpe: +$("a-rpe").value, carbs: numOrNull($("a-carbs").value), fluid: numOrNull($("a-fluid").value),
+      gi: giSeg.get() == null ? null : +giSeg.get(), note: $("a-note").value.trim(), createdAt: new Date().toISOString(),
+    };
+    $("a-save").disabled = true;
+    try {
+      await state.db.collection("activities").add(doc);
+      ["a-min", "a-km", "a-dplus", "a-hr", "a-carbs", "a-fluid", "a-note"].forEach(i => { $(i).value = ""; });
+      giSeg.set(null); $("a-fuel").open = false; updGph();
+      toast(`${md(date)}の${KIND_LABEL[kind]}を記録しました`);
+    } catch (err) { writeErr(err, "a-msg"); }
+    finally { setWritable(); }
+  });
+
+  $("form-chk").addEventListener("submit", async e => {
+    e.preventDefault(); $("c-msg").textContent = "";
+    const date = $("c-date").value;
+    if (!date) { $("c-msg").textContent = "日付を入れてください。"; return; }
+    const doc = {
+      date, fatigue: fatSeg.get() == null ? null : +fatSeg.get(), quad: +$("c-quad").value, knee: +$("c-knee").value,
+      where: whereSeg.get(), sleep: numOrNull($("c-sleep").value), rhr: numOrNull($("c-rhr").value), note: $("c-note").value.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+    $("c-save").disabled = true;
+    try { await state.db.doc("checkins/" + date).set(doc); toast(`${md(date)}の体調を保存しました`); $("c-save").textContent = "上書き保存する"; }
+    catch (err) { writeErr(err, "c-msg"); }
+    finally { setWritable(); }
+  });
+
+  $("recent").addEventListener("click", async e => {
+    const b = e.target.closest(".del"); if (!b || !state.db) return;
+    if (!b.classList.contains("confirm")) {
+      document.querySelectorAll(".del.confirm").forEach(x => { x.classList.remove("confirm"); x.textContent = "削除"; });
+      b.classList.add("confirm"); b.textContent = "本当に削除"; return;
+    }
+    b.disabled = true;
+    try { await state.db.doc("activities/" + b.dataset.id).delete(); toast("削除しました"); }
+    catch (err) { b.disabled = false; toast("削除できませんでした"); }
+  });
+
+  $("prevw").addEventListener("click", () => { state.selWeek = Math.max(1, state.selWeek - 1); render(); });
+  $("nextw").addEventListener("click", () => { state.selWeek = Math.min(24, state.selWeek + 1); render(); });
+
+  let lastW = 0;
+  new ResizeObserver(() => { const w = $("ch-hours").clientWidth; if (Math.abs(w - lastW) > 4) { lastW = w; renderCharts(); } }).observe(document.querySelector(".cols"));
+
+  /* ---------- data ---------- */
+  const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  async function connect() {
+    const use = window.claude && typeof window.claude.use === "function" ? window.claude.use.bind(window.claude) : null;
+    const db = use ? await use("db").catch(() => null) : null;
+    if (!db) { state.conn = "offline"; setWritable(); render(); return; }
+    state.db = db;
+    const user = await use("user").catch(() => null);
+    if (user) { try { const c = await user.can("data.write"); if (c === false) state.canWrite = false; } catch (_) {} }
+    const onErr = e => { if (e && e.code === "revoked") { state.db = null; state.conn = "offline"; } setWritable(); render(); };
+    let pending = 5, checksLoaded = false;
+    const ready = () => { if (pending > 0 && --pending === 0) { state.conn = "ready"; setWritable(); } render(); };
+    db.collection("weeks").onSnapshot(s => { state.weeks = rows(s).map(w => ({ ...w, n: +w.n })).sort((a, b) => a.n - b.n); ready(); }, onErr);
+    db.collection("activities").orderBy("date", "desc").limit(600).onSnapshot(s => { state.acts = rows(s); ready(); }, onErr);
+    db.collection("checkins").orderBy("date", "desc").limit(250).onSnapshot(s => { state.checks = rows(s); if (!checksLoaded) { checksLoaded = true; fillCheck(); } ready(); }, onErr);
+    db.collection("reviews").orderBy("date", "desc").limit(5).onSnapshot(s => { state.reviews = rows(s); ready(); }, onErr);
+    db.doc("config/main").onSnapshot(s => { state.config = s.exists ? s.data() : null; ready(); }, onErr);
+    setWritable();
+  }
+
+  setWritable();
+  renderAll();
+  connect();
+})();
+</script>
