@@ -200,6 +200,31 @@ details > .row, details > .field { margin-top: 10px; }
 .flag { color: var(--warn); font-weight: 700; }
 .empty-state { color: var(--ink-2); font-size: .9rem; padding: 6px 0; }
 
+/* strength */
+.linkbtn { appearance: none; border: 0; background: none; padding: 0 0 0 6px; color: var(--accent); font-weight: 700; font-size: .82rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.ex-common { font-size: .86rem; color: var(--ink-2); display: grid; gap: 2px; }
+.ex-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); }
+.ex { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.ex-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ex-head h3 { font-size: .98rem; }
+.ex-reps { font-family: var(--font-num); font-size: .8rem; background: var(--accent-soft); color: var(--accent); padding: 1px 8px; border-radius: 4px; white-space: nowrap; }
+.ex-aim { font-size: .84rem; color: var(--ink-2); }
+.ex ol { margin: 0; padding-left: 1.3em; font-size: .88rem; display: grid; gap: 3px; }
+.ex-tips { margin: 0; padding: 8px 10px; list-style: none; background: var(--grid); border-radius: 6px; font-size: .82rem; display: grid; gap: 3px; }
+.ex-tips li::before { content: "● "; color: var(--tape); font-size: .7em; vertical-align: 1px; }
+.figs { display: flex; align-items: center; gap: 4px; }
+.fig-frame { margin: 0; flex: 1 1 0; min-width: 0; display: grid; gap: 2px; justify-items: center; }
+.fig-frame svg { width: 100%; max-width: 150px; height: auto; display: block; background: var(--bg); border-radius: 6px; }
+.fig-frame figcaption { font-size: .72rem; color: var(--muted); }
+.fig-arrow { color: var(--muted); font-size: .9rem; }
+.fig { fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.fig.far { stroke: var(--muted); }
+.fig.head { fill: var(--ink); stroke: none; }
+.prop { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.prop.box { fill: var(--band); stroke: var(--line); }
+.rband { stroke: var(--tape); stroke-width: 3; stroke-linecap: round; }
+.arrow { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
 .review-body { white-space: pre-wrap; font-size: .92rem; line-height: 1.75; }
 .review-meta { font-size: .8rem; color: var(--muted); }
 
@@ -352,6 +377,22 @@ details > .row, details > .field { margin-top: 10px; }
     </div>
   </div>
 
+  <section class="panel" id="strength" aria-labelledby="st-h">
+    <div class="panel-head">
+      <h2 id="st-h">筋トレのやり方</h2>
+      <span class="sub">黒が手前の脚・腕、灰色が奥の脚・腕</span>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab st-tab" role="tab" id="st-A" aria-selected="true" data-r="A">筋トレA（火・約35分）</button>
+      <button class="tab st-tab" role="tab" id="st-B" aria-selected="false" data-r="B">筋トレB（日・約15分）</button>
+    </div>
+    <div class="ex-common">
+      <p>セット間の休みは60〜90秒。あと1〜3回できる余裕を残して終える。</p>
+      <p>W1〜W2は自重・2セットから。12回が楽になったら、リュックに5kg → 10kg を入れて負荷を足す。</p>
+    </div>
+    <div class="ex-grid" id="ex-grid"></div>
+  </section>
+
   <section class="panel" aria-labelledby="rc-h">
     <div class="panel-head"><h2 id="rc-h">最近の練習</h2><span class="sub">直近20件</span></div>
     <div class="tablewrap" id="recent"></div>
@@ -468,7 +509,7 @@ details > .row, details > .field { margin-top: 10px; }
   function renderAll() {
     const race = (state.config && state.config.raceDate) || RACE_DEFAULT;
     $("days").textContent = Math.max(0, dnum(race) - dnum(today));
-    $("today").textContent = md(today);
+    $("today").textContent = `${md(today)}（${"日月火水木金土"[new Date(dnum(today) * 864e5).getUTCDay()]}）`;
     const nw = weekDoc(nowWeek);
     $("nowweek").textContent = `W${nowWeek}/24${nw ? "・" + nw.phase : ""}`;
     if (state.config && state.config.targetTime) $("target").textContent = state.config.targetTime;
@@ -540,7 +581,7 @@ details > .row, details > .field { margin-top: 10px; }
         meter("最長の1回", g.longH, w.long, fmtH, "h") +
         `<div class="meter-top"><span class="lbl">距離・km-effort</span><span class="num">${fmtH(g.km)}km ・ ${fmtH(g.ke)}</span></div>`;
       $("sessions").innerHTML = (w.sessions || []).map(s =>
-        `<li><span class="day">${esc(s.day)}</span><div><div class="t">${esc(s.title)}</div>${s.detail ? `<div class="d">${esc(s.detail)}</div>` : ""}</div></li>`).join("")
+        `<li><span class="day">${esc(s.day)}</span><div><div class="t">${esc(s.title)}${/筋トレ[AB]/.test(s.title) ? `<button class="linkbtn" type="button" data-r="${s.title.match(/筋トレ([AB])/)[1]}">やり方</button>` : ""}</div>${s.detail ? `<div class="d">${esc(s.detail)}</div>` : ""}</div></li>`).join("")
         + (w.note ? `<li style="display:block"><div class="note">${esc(w.note)}</div></li>` : "");
     }
     const p = priorMax(today, true);
@@ -697,6 +738,135 @@ details > .row, details > .field { margin-top: 10px; }
     $("review").textContent = r.body || "";
   }
 
+  /* ---------- exercise figures ---------- */
+  // Side-view stick figures, facing right. Ground at y=128 in a 130x136 box.
+  // Legs and arms are solved with two-bone IK so limb lengths stay constant.
+  const SEG = { thigh: 24, shin: 24, torso: 30, upper: 14, fore: 14 };
+  const GROUND = 128;
+  function ik(a, b, l1, l2, pref) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy) || 0.001;
+    if (d >= l1 + l2) return [a[0] + dx * l1 / d, a[1] + dy * l1 / d];
+    const along = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - along * along));
+    const mx = a[0] + dx * along / d, my = a[1] + dy * along / d, px = -dy / d, py = dx / d;
+    const s = (px * pref[0] + py * pref[1]) >= 0 ? 1 : -1;
+    return [mx + s * h * px, my + s * h * py];
+  }
+  const P = p => p.map(v => v.toFixed(1)).join(",");
+  function limb(a, j, b, cls) { return `<polyline class="${cls}" points="${P(a)} ${P(j)} ${P(b)}"/>`; }
+  function pose(p) {
+    const t = (p.lean || 0) * Math.PI / 180, ux = Math.sin(t), uy = -Math.cos(t);
+    const hip = p.hip, sh = [hip[0] + ux * SEG.torso, hip[1] + uy * SEG.torso], head = [sh[0] + ux * 10, sh[1] + uy * 10];
+    let out = "";
+    const leg = (L, cls) => {
+      const knee = L.knee || ik(hip, L.ankle, SEG.thigh, SEG.shin, L.bend || [1, 0]);
+      const toe = L.toe || [L.ankle[0] + 7, L.ankle[1] + 1];
+      return limb(hip, knee, L.ankle, cls) + `<line class="${cls}" x1="${P([L.ankle[0]])}" y1="${P([L.ankle[1]])}" x2="${P([toe[0]])}" y2="${P([toe[1]])}"/>`;
+    };
+    const arm = (A, cls) => {
+      const el = A.elbow || ik(sh, A.hand, SEG.upper, SEG.fore, A.bend || [-1, 0]);
+      return limb(sh, el, A.hand, cls);
+    };
+    out += leg(p.far, "fig far") + arm(p.farArm || p.nearArm, "fig far");
+    out += `<line class="fig" x1="${P([hip[0]])}" y1="${P([hip[1]])}" x2="${P([sh[0]])}" y2="${P([sh[1]])}"/>`;
+    out += leg(p.near, "fig") + arm(p.nearArm, "fig");
+    out += `<circle class="fig head" cx="${P([head[0]])}" cy="${P([head[1]])}" r="6.5"/>`;
+    return out;
+  }
+  function raw(lines) { return lines.map(([pts, cls]) => `<polyline class="fig${cls ? " " + cls : ""}" points="${pts}"/>`).join(""); }
+  const floor = `<line class="prop" x1="4" y1="${GROUND + 1}" x2="126" y2="${GROUND + 1}"/>`;
+  const box = (x, w, top) => `<rect class="prop box" x="${x}" y="${top}" width="${w}" height="${GROUND + 1 - top}" rx="1.5"/>`;
+  const wall = x => `<line class="prop" x1="${x}" y1="20" x2="${x}" y2="${GROUND + 1}"/>`;
+
+  const FIG = {
+    stepdown: [
+      box(10, 50, 115) + pose({ hip: [46, 69], lean: 3, near: { ankle: [46, 114] }, far: { ankle: [66, 111], toe: [72, 113], bend: [0, 1] }, nearArm: { hand: [62, 88], bend: [0, 1] }, farArm: { hand: [60, 89], bend: [0, 1] } }),
+      box(10, 50, 115) + pose({ hip: [42, 87], lean: 26, near: { ankle: [46, 114] }, far: { ankle: [70, 124], toe: [77, 127], bend: [0, 1] }, nearArm: { hand: [80, 80], bend: [0, 1] }, farArm: { hand: [78, 82], bend: [0, 1] } }),
+    ],
+    bulgarian: [
+      box(10, 32, 104) + pose({ hip: [62, 83], lean: 6, near: { ankle: [78, 127] }, far: { ankle: [34, 101], toe: [26, 104], bend: [0, 1] }, nearArm: { hand: [64, 110] }, farArm: { hand: [62, 110] } }),
+      box(10, 32, 104) + pose({ hip: [58, 99], lean: 10, near: { ankle: [78, 127] }, far: { ankle: [34, 101], toe: [26, 104], bend: [0, 1] }, nearArm: { hand: [64, 125] }, farArm: { hand: [62, 125] } }),
+    ],
+    rdl: [
+      pose({ hip: [62, 81], lean: 2, near: { ankle: [63, 127] }, far: { ankle: [54, 120], toe: [57, 127], bend: [1, 0] }, nearArm: { hand: [66, 107] }, farArm: { hand: [64, 107] } }),
+      pose({ hip: [56, 83], lean: 80, near: { ankle: [63, 127] }, far: { ankle: [12, 80], toe: [10, 87], bend: [0, 1] }, nearArm: { hand: [86, 104], bend: [-1, 0] }, farArm: { hand: [84, 104], bend: [-1, 0] } }),
+    ],
+    wallsit: [
+      wall(31) + pose({ hip: [38, 103], lean: 0, near: { ankle: [62, 127], knee: [62, 103] }, far: { ankle: [60, 127], knee: [60, 103] }, nearArm: { hand: [58, 98], bend: [1, 0] }, farArm: { hand: [56, 98], bend: [1, 0] } }),
+    ],
+    bandwalk: [
+      raw([
+        ["65,25 65,54", ""], ["52,56 78,56", ""], ["52,56 46,70 50,84", ""], ["78,56 84,70 80,84", ""],
+        ["56,86 74,86", ""], ["56,86 50,106 47,127 41,128", ""], ["74,86 80,106 83,127 89,128", ""],
+      ]) + `<circle class="fig head" cx="65" cy="18" r="6.5"/><line class="rband" x1="50" y1="100" x2="80" y2="100"/>`,
+      raw([
+        ["67,25 67,54", ""], ["54,56 80,56", ""], ["54,56 48,70 52,84", ""], ["80,56 86,70 82,84", ""],
+        ["58,86 76,86", ""], ["58,86 52,106 49,127 43,128", ""], ["76,86 90,105 99,126 105,127", ""],
+      ]) + `<circle class="fig head" cx="67" cy="18" r="6.5"/><line class="rband" x1="52" y1="100" x2="88" y2="98"/><path class="arrow" d="M100,74 h16 m-5,-4 l5,4 l-5,4"/>`,
+    ],
+    calf: [
+      box(54, 26, 113) + wall(84) + pose({ hip: [50, 72], lean: 0, near: { ankle: [50, 119], toe: [59, 112] }, far: { ankle: [36, 100], toe: [34, 107], bend: [1, 0] }, nearArm: { hand: [82, 50] }, farArm: { hand: [82, 53] } }),
+      box(54, 26, 113) + wall(84) + pose({ hip: [54, 57], lean: 0, near: { ankle: [54, 103], toe: [59, 112] }, far: { ankle: [40, 85], toe: [38, 92], bend: [1, 0] }, nearArm: { hand: [82, 36] }, farArm: { hand: [82, 39] } }),
+    ],
+    sideplank: [
+      pose({ hip: [68, 117], lean: -79, near: { ankle: [112, 127], toe: [114, 120] }, far: { ankle: [111, 123], toe: [113, 116] }, nearArm: { elbow: [39, 127], hand: [52, 127] }, farArm: { hand: [39, 84], bend: [-1, 0] } })
+        + `<path class="arrow" d="M70,104 v-14 m-4,5 l4,-5 l4,5"/>`,
+    ],
+  };
+  const POSE_LABEL = { 1: ["キープ"], 2: ["スタート", "動いたあと"] };
+  function figureSVG(id, name) {
+    const frames = FIG[id] || [];
+    const labels = POSE_LABEL[frames.length] || [];
+    return `<div class="figs" role="img" aria-label="${esc(name)}の動き：${labels.join("から")}">` + frames.map((f, i) =>
+      `<figure class="fig-frame"><svg viewBox="0 10 130 126" aria-hidden="true">${floor}${f}</svg><figcaption>${labels[i] || ""}</figcaption></figure>`
+      + (i < frames.length - 1 ? `<span class="fig-arrow" aria-hidden="true">→</span>` : "")).join("") + `</div>`;
+  }
+
+  const EX = {
+    stepdown: { name: "スロー・ステップダウン", aim: "下りでブレーキをかける太もも前。伸ばされながら力を出す動きで、このプランでいちばん大事な種目",
+      steps: ["20〜30cmの台（階段の1段でもよい）に片脚で立つ", "反対の脚を台の前に浮かせる", "3〜4秒かけて支える脚の膝を曲げ、浮かせた脚のかかとを床に近づける", "かかとが床に軽く触れたら（体重は乗せない）、支える脚で押して元に戻る"],
+      tips: ["膝はつま先と同じ向き。内側に入れない", "骨盤を水平に保つ", "膝の前が痛むときは浅くする"] },
+    bulgarian: { name: "ブルガリアンスクワット", aim: "登りで押し上げる力と、下りで支える力",
+      steps: ["後ろ足の甲をベンチや椅子に乗せ、前脚を大きく1歩前に出す", "3秒かけて真下に沈む。後ろ脚の膝が床に近づくまで", "前脚のかかとで床を押して立ち上がる"],
+      tips: ["体重は前脚に8〜9割", "上体は軽く前傾でよい。背中は丸めない", "ふらつくなら、壁や椅子に手を添える"] },
+    rdl: { name: "片脚ルーマニアンデッドリフト", aim: "お尻ともも裏。登りの推進力と骨盤の安定",
+      steps: ["片脚で立ち、膝をほんの少し曲げる", "お尻を後ろに引きながら上体を前に倒す。反対の脚は後ろにまっすぐ伸ばす", "上体と後ろ脚が床と平行に近づいたら、お尻を締めて戻る"],
+      tips: ["背中を丸めない", "腰を開かない（骨盤を床と平行に）", "ふらつくなら、壁に指先を添える"] },
+    wallsit: { name: "ウォールシット", aim: "膝を曲げ伸ばししないで太もも前を鍛える。膝に負担が少ない",
+      steps: ["壁に背中をつけ、足を壁から50cmほど前に出す", "背中を壁に沿わせて下がり、膝が90°前後の位置で止める", "そのまま30〜45秒キープする"],
+      tips: ["かかとは膝の真下", "膝が痛むときは浅く（膝の角度を大きく）する"] },
+    bandwalk: { name: "バンドで横歩き", aim: "お尻の横（中臀筋）。下りで膝が内側に入るのを防ぐ",
+      steps: ["ミニバンドを膝の少し上か足首に巻く", "軽く膝を曲げた中腰になる", "バンドの張りを保ったまま、横に1歩ずつ進む。反対方向も同じ歩数"],
+      tips: ["つま先は正面に向ける", "上体を左右に揺らさない", "バンドがなければ、横向きに寝てひざを開くクラムシェル（2×15回）で代用"] },
+    calf: { name: "片脚カーフレイズ", aim: "ふくらはぎと足首。長い登りと下りでの持久力",
+      steps: ["段差の端に片足の前半分を乗せ、壁に手を添える", "かかとを段差より下まで下げる", "1〜2秒でつま先立ちまで上げ、上で1秒止める", "2〜3秒かけて下ろす"],
+      tips: ["膝は伸ばしたまま", "親指側に体重を乗せる", "20〜25回が楽になったら荷物を持つ"] },
+    sideplank: { name: "サイドプランク", aim: "体幹の横。不整地で骨盤を安定させる",
+      steps: ["横向きに寝て、肩の真下にひじをつく", "お尻を持ち上げ、頭から足までを一直線にする", "そのままキープし、反対側も行う"],
+      tips: ["お尻が下がったり、後ろに引けたりしない", "きつければ、下の膝を床についてもよい"] },
+  };
+  const ROUTINES = {
+    A: [["stepdown", "3×8〜10回／脚"], ["bulgarian", "3×8〜10回／脚"], ["rdl", "3×8回／脚"], ["wallsit", "3×30〜45秒"], ["bandwalk", "2×15歩／方向"], ["calf", "3×15〜20回／脚"]],
+    B: [["stepdown", "2×10回／脚"], ["calf", "2×20回／脚"], ["sideplank", "2×40秒／左右"]],
+  };
+  function renderStrength(r) {
+    document.querySelectorAll(".st-tab").forEach(t => t.setAttribute("aria-selected", t.dataset.r === r));
+    $("ex-grid").innerHTML = ROUTINES[r].map(([id, reps], i) => {
+      const e = EX[id];
+      return `<article class="ex"><div class="ex-head"><h3>${i + 1}. ${esc(e.name)}</h3><span class="ex-reps">${esc(reps)}</span></div>
+        ${figureSVG(id, e.name)}
+        <p class="ex-aim">${esc(e.aim)}</p>
+        <ol>${e.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol>
+        <ul class="ex-tips">${e.tips.map(x => `<li>${esc(x)}</li>`).join("")}</ul></article>`;
+    }).join("");
+  }
+  document.querySelectorAll(".st-tab").forEach(t => t.addEventListener("click", () => renderStrength(t.dataset.r)));
+  $("sessions").addEventListener("click", e => {
+    const b = e.target.closest(".linkbtn"); if (!b) return;
+    renderStrength(b.dataset.r);
+    $("strength").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  renderStrength("A");
+
   /* ---------- forms ---------- */
   function seg(boxId, items, multi, initial) {
     const box = $(boxId); const sel = new Set(initial == null ? [] : [].concat(initial));
@@ -734,8 +904,8 @@ details > .row, details > .field { margin-top: 10px; }
   }
   $("c-date").addEventListener("change", fillCheck);
 
-  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+  document.querySelectorAll("#tab-act, #tab-chk").forEach(t => t.addEventListener("click", () => {
+    document.querySelectorAll("#tab-act, #tab-chk").forEach(x => x.setAttribute("aria-selected", x === t));
     $("form-act").hidden = t.id !== "tab-act"; $("form-chk").hidden = t.id !== "tab-chk";
   }));
 
