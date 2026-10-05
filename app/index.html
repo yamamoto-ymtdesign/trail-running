@@ -374,6 +374,11 @@ details > .row, details > .field { margin-top: 10px; }
         <div id="review" class="review-body"></div>
         <p class="hint">週末に Claude へ「今週のレビューをして」と頼むと、ここの記録を読んで来週の計画を見直します。</p>
       </section>
+      <section class="panel" id="raceplan" aria-labelledby="rp-h" hidden>
+        <div class="panel-head"><h2 id="rp-h">レース当日の通過目標</h2><span class="sub" id="rp-sub"></span></div>
+        <div class="tablewrap" id="rp-table"></div>
+        <p class="hint" id="rp-note"></p>
+      </section>
     </div>
   </div>
 
@@ -513,7 +518,7 @@ details > .row, details > .field { margin-top: 10px; }
     const nw = weekDoc(nowWeek);
     $("nowweek").textContent = `W${nowWeek}/24${nw ? "・" + nw.phase : ""}`;
     if (state.config && state.config.targetTime) $("target").textContent = state.config.targetTime;
-    renderRibbon(); renderAlerts(); renderWeek(); renderCharts(); renderRecent(); renderChecks(); renderReview();
+    renderRibbon(); renderAlerts(); renderWeek(); renderCharts(); renderRecent(); renderChecks(); renderReview(); renderRacePlan();
   }
 
   function renderRibbon() {
@@ -730,6 +735,15 @@ details > .row, details > .field { margin-top: 10px; }
     box.innerHTML = `<table class="list"><thead><tr><th>日付</th><th class="r">疲れ</th><th class="r">太もも前</th><th class="r">膝</th><th>場所</th><th class="r">睡眠</th><th class="r">安静時心拍</th><th>メモ</th></tr></thead><tbody>${rows.map(c =>
       `<tr><td class="num">${md(c.date)}</td><td class="r num">${c.fatigue ?? "—"}</td><td class="r num">${c.quad ?? "—"}</td><td class="r num">${c.knee ?? "—"}</td>
        <td>${esc((c.where || []).join("・")) || "—"}</td><td class="r num">${c.sleep ?? "—"}</td><td class="r num">${c.rhr ?? "—"}</td><td class="memo">${esc(c.note || "")}</td></tr>`).join("")}</tbody></table>`;
+  }
+  function renderRacePlan() {
+    const c = state.config, aid = c && Array.isArray(c.aid) ? c.aid : null;
+    $("raceplan").hidden = !aid;
+    if (!aid) return;
+    $("rp-sub").textContent = `スタート ${c.startTime || "6:00"}・制限${c.timeLimitH || 12}時間・目標 ${String(c.targetTime || "").replace(/（.*/, "")}`;
+    $("rp-table").innerHTML = `<table class="list"><thead><tr><th>地点</th><th class="r">距離</th><th class="r">目標</th><th class="r">時刻</th><th class="r">関門</th><th class="r">余裕</th></tr></thead><tbody>${aid.map(a =>
+      `<tr><td>${esc(a.name)}</td><td class="r num">${esc(a.km)}km</td><td class="r num"><b>${esc(a.target)}</b></td><td class="r num">${esc(a.clock)}</td><td class="r num">${esc(a.cutoff)}</td><td class="r num">${esc(a.margin)}</td></tr>`).join("")}</tbody></table>`;
+    $("rp-note").textContent = c.aidNote || "";
   }
   function renderReview() {
     const r = state.reviews.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
