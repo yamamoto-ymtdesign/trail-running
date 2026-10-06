@@ -429,7 +429,7 @@ details > .row, details > .field { margin-top: 10px; }
       <span class="sub">黒が手前の脚・腕、灰色が奥の脚・腕</span>
     </div>
     <div class="tabs" role="tablist">
-      <button class="tab st-tab" role="tab" id="st-A" aria-selected="true" data-r="A">筋トレA（火・約35分）</button>
+      <button class="tab st-tab" role="tab" id="st-A" aria-selected="true" data-r="A">筋トレA（火・約40分）</button>
       <button class="tab st-tab" role="tab" id="st-B" aria-selected="false" data-r="B">筋トレB（日・約15分）</button>
     </div>
     <div class="ex-common">
@@ -877,6 +877,10 @@ details > .row, details > .field { margin-top: 10px; }
       box(10, 50, 115) + pose({ hip: [46, 69], lean: 3, near: { ankle: [46, 114] }, far: { ankle: [66, 111], toe: [72, 113], bend: [0, 1] }, nearArm: { hand: [62, 88], bend: [0, 1] }, farArm: { hand: [60, 89], bend: [0, 1] } }),
       box(10, 50, 115) + pose({ hip: [42, 87], lean: 26, near: { ankle: [46, 114] }, far: { ankle: [70, 124], toe: [77, 127], bend: [0, 1] }, nearArm: { hand: [80, 80], bend: [0, 1] }, farArm: { hand: [78, 82], bend: [0, 1] } }),
     ],
+    stepup: [
+      box(52, 52, 104) + pose({ hip: [52, 84], lean: 16, near: { ankle: [66, 103] }, far: { ankle: [40, 127], toe: [47, 128] }, nearArm: { hand: [64, 86] }, farArm: { hand: [62, 86] } }),
+      box(52, 52, 104) + pose({ hip: [66, 57], lean: 3, near: { ankle: [66, 103] }, far: { ankle: [72, 84], toe: [79, 86], bend: [1, -0.3] }, nearArm: { hand: [70, 80] }, farArm: { hand: [62, 82] } }),
+    ],
     bulgarian: [
       box(10, 32, 104) + pose({ hip: [62, 83], lean: 6, near: { ankle: [78, 127] }, far: { ankle: [34, 101], toe: [26, 104], bend: [0, 1] }, nearArm: { hand: [64, 110] }, farArm: { hand: [62, 110] } }),
       box(10, 32, 104) + pose({ hip: [58, 99], lean: 10, near: { ankle: [78, 127] }, far: { ankle: [34, 101], toe: [26, 104], bend: [0, 1] }, nearArm: { hand: [64, 125] }, farArm: { hand: [62, 125] } }),
@@ -920,6 +924,9 @@ details > .row, details > .field { margin-top: 10px; }
     stepdown: { name: "スロー・ステップダウン", aim: "下りでブレーキをかける太もも前。伸ばされながら力を出す動きで、このプランでいちばん大事な種目",
       steps: ["20〜30cmの台（階段の1段でもよい）に片脚で立つ", "反対の脚を台の前に浮かせる", "3〜4秒かけて支える脚の膝を曲げ、浮かせた脚のかかとを床に近づける", "かかとが床に軽く触れたら（体重は乗せない）、支える脚で押して元に戻る"],
       tips: ["膝はつま先と同じ向き。内側に入れない", "骨盤を水平に保つ", "膝の前が痛むときは浅くする"] },
+    stepup: { name: "ステップアップ（高い台）", aim: "岩や階段の急な登りで体を押し上げる力。和気アルプスの急登対策",
+      steps: ["40cm前後の台（ベンチや高めの段差）の前に立ち、片足を台に乗せる", "台に乗せた脚で押して上がる。後ろの脚で床を蹴らない", "上がりきったら反対の膝を軽く前に出し、2〜3秒かけて同じ脚で下りる"],
+      tips: ["かかとまで台に乗せ、お尻で押す", "上体は少し前に倒してよい。膝は内側に入れない", "楽になったらリュックに5kg → 10kg"] },
     bulgarian: { name: "ブルガリアンスクワット", aim: "登りで押し上げる力と、下りで支える力",
       steps: ["後ろ足の甲をベンチや椅子に乗せ、前脚を大きく1歩前に出す", "3秒かけて真下に沈む。後ろ脚の膝が床に近づくまで", "前脚のかかとで床を押して立ち上がる"],
       tips: ["体重は前脚に8〜9割", "上体は軽く前傾でよい。背中は丸めない", "ふらつくなら、壁や椅子に手を添える"] },
@@ -940,7 +947,7 @@ details > .row, details > .field { margin-top: 10px; }
       tips: ["お尻が下がったり、後ろに引けたりしない", "きつければ、下の膝を床についてもよい"] },
   };
   const ROUTINES = {
-    A: [["stepdown", "3×8〜10回／脚"], ["bulgarian", "3×8〜10回／脚"], ["rdl", "3×8回／脚"], ["wallsit", "3×30〜45秒"], ["bandwalk", "2×15歩／方向"], ["calf", "3×15〜20回／脚"]],
+    A: [["stepdown", "3×8〜10回／脚"], ["stepup", "3×8〜10回／脚"], ["bulgarian", "3×8〜10回／脚"], ["rdl", "3×8回／脚"], ["wallsit", "2×30〜45秒"], ["bandwalk", "2×15歩／方向"], ["calf", "3×15〜20回／脚"]],
     B: [["stepdown", "2×10回／脚"], ["calf", "2×20回／脚"], ["sideplank", "2×40秒／左右"]],
   };
   function renderStrength(r) {
