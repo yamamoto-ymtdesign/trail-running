@@ -248,6 +248,16 @@ details > .row, details > .field { margin-top: 10px; }
 .chip:hover { border-color: var(--accent); color: var(--ink); }
 .ghost { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 14px; cursor: pointer; min-height: 44px; }
 
+/* today */
+.today { border-color: var(--accent); }
+.td-main { display: grid; gap: 4px; }
+.td-title { font-size: 1.2rem; font-weight: 700; line-height: 1.45; }
+.td-detail { color: var(--ink-2); font-size: .92rem; }
+.td-list { display: grid; gap: 12px; }
+.td-status { display: flex; flex-wrap: wrap; gap: 6px; }
+.td-next { font-size: .86rem; color: var(--ink-2); border-top: 1px dashed var(--line); padding-top: 10px; }
+.td-next b { color: var(--ink); }
+
 .review-body { white-space: pre-wrap; font-size: .92rem; line-height: 1.75; }
 .review-meta { font-size: .8rem; color: var(--muted); }
 
@@ -285,6 +295,17 @@ details > .row, details > .field { margin-top: 10px; }
   </header>
 
   <section class="alerts" id="alerts" aria-live="polite"></section>
+
+  <section class="panel today" id="today-card" aria-labelledby="td-h">
+    <div class="panel-head">
+      <h2 id="td-h">今日のトレーニング</h2>
+      <span class="sub" id="td-sub"></span>
+    </div>
+    <div class="td-list" id="td-body"><p class="empty-state">計画を読み込んでいます…</p></div>
+    <div class="td-status" id="td-status"></div>
+    <div class="actions" id="td-actions"></div>
+    <p class="td-next" id="td-next" hidden></p>
+  </section>
 
   <div class="cols">
     <div class="col">
@@ -349,6 +370,7 @@ details > .row, details > .field { margin-top: 10px; }
         </form>
 
         <form id="form-chk" role="tabpanel" aria-labelledby="tab-chk" hidden novalidate>
+          <p class="hint">毎朝、起きてすぐ・練習の前に記録します。安静時心拍は、起きてすぐ横になったまま1分測った値です。練習中に出た痛みは「練習」のメモに書きます。</p>
           <div class="row">
             <div class="field"><label for="c-date">日付</label><input type="date" id="c-date" required></div>
             <div class="field"><label for="c-sleep">睡眠 時間</label><input type="number" id="c-sleep" inputmode="decimal" step="0.5" min="0" max="14" placeholder="6.5"></div>
@@ -559,7 +581,7 @@ details > .row, details > .field { margin-top: 10px; }
     const nw = weekDoc(nowWeek);
     $("nowweek").textContent = `W${nowWeek}/24${nw ? "・" + nw.phase : ""}`;
     if (state.config && state.config.targetTime) $("target").textContent = state.config.targetTime;
-    renderRibbon(); renderAlerts(); renderWeek(); renderCharts(); renderRecent(); renderChecks(); renderReview(); renderRacePlan();
+    renderRibbon(); renderAlerts(); renderToday(); renderWeek(); renderCharts(); renderRecent(); renderChecks(); renderReview(); renderRacePlan();
   }
 
   function renderRibbon() {
@@ -592,6 +614,80 @@ details > .row, details > .field { margin-top: 10px; }
     }
     box.innerHTML = list.map(a => `<div class="alert ${a.lv}"><span class="ic" aria-hidden="true">!</span><div><span class="lvl">${a.lv === "crit" ? "要対応" : "注意"}</span>${a.t}</div></div>`).join("");
   }
+
+  const DOW = "日月火水木金土";
+  const dowOf = s => DOW[new Date(dnum(s) * 864e5).getUTCDay()];
+  // "火", "土/日", "土/祝", "月祝" name weekdays; "休日1" or "翌日" are floating sessions
+  const dowsOf = s => String(s.day || "").replace(/祝/g, "").split("/").filter(x => x.length === 1 && DOW.includes(x));
+  const hasDow = s => dowsOf(s).length > 0;
+  function sessionsOn(date) {
+    const w = weekDoc(weekOf(date));
+    if (!w) return { w: null, list: [] };
+    const d = dowOf(date);
+    return { w, list: (w.sessions || []).filter(s => dowsOf(s).includes(d)) };
+  }
+  function kindFor(title) {
+    if (/里山|急登/.test(title)) return "hill";
+    if (/トレイル|試走|模擬レース|和気アルプス/.test(title)) return "trail";
+    if (/Easy|ジョグ|流し|レースペース/.test(title)) return "road";
+    if (/筋トレ/.test(title)) return "strength";
+    return null;
+  }
+  let todayKind = null;
+  function renderToday() {
+    const race = (state.config && state.config.raceDate) || RACE_DEFAULT;
+    $("td-sub").textContent = `${md(today)}（${dowOf(today)}）`;
+    const body = $("td-body"), status = $("td-status"), actions = $("td-actions"), next = $("td-next");
+    todayKind = null;
+    if (today === race) {
+      const t = state.config && state.config.targetTime ? String(state.config.targetTime).replace(/（.*/, "") : "8:20";
+      body.innerHTML = `<div class="td-main"><div class="td-title">WAKE ALPS TRAIL 本番</div><div class="td-detail">6:00スタート。目標 ${esc(t)}。A1（14km）に2:15より早く着いたら飛ばしすぎ。33.7km からの勝負どころに脚を残す。通過目標は下の「レース当日の通過目標」に。</div></div>`;
+      status.innerHTML = ""; actions.innerHTML = ""; next.hidden = true; return;
+    }
+    if (state.conn !== "ready" && !state.weeks.length) return;
+    const { w, list } = sessionsOn(today);
+    if (!w) {
+      body.innerHTML = `<p class="empty-state">${dnum(today) < dnum(PLAN_START) ? "計画は 10/5（月）から始まります。" : "この日の計画はありません。"}</p>`;
+      status.innerHTML = ""; actions.innerHTML = ""; next.hidden = true; return;
+    }
+    const floating = (w.sessions || []).filter(s => !hasDow(s));
+    let html = "";
+    if (list.length) {
+      html = list.map(s => `<div class="td-main"><div class="td-title">${esc(s.title)}${/筋トレ[AB]/.test(s.title) ? `<button class="linkbtn" type="button" data-r="${s.title.match(/筋トレ([AB])/)[1]}">やり方</button>` : ""}</div>${s.detail ? `<div class="td-detail">${esc(s.detail)}</div>` : ""}</div>`).join("");
+      todayKind = kindFor(list[0].title);
+    } else {
+      html = `<div class="td-main"><div class="td-title">休み</div><div class="td-detail">疲れを抜く日です。軽い散歩やストレッチ程度に。</div></div>`;
+      if (floating.length) html += `<div class="td-main"><div class="td-detail">今週は、休みの日に合わせて次の練習を入れます：${floating.map(s => esc(s.day + "：" + s.title)).join("／")}</div></div>`;
+    }
+    if (w.note) html += `<div class="note">${esc(w.note)}</div>`;
+    body.innerHTML = html;
+    const doneAct = state.acts.some(a => a.date === today);
+    const doneChk = state.checks.some(c => c.date === today);
+    status.innerHTML = state.conn === "ready"
+      ? `<span class="pill ${doneChk ? "ok" : "warn"}">体調 ${doneChk ? "記録済み" : "まだ"}</span>` + (list.length ? `<span class="pill ${doneAct ? "ok" : "idle"}">練習 ${doneAct ? "記録済み" : "まだ"}</span>` : "")
+      : "";
+    actions.innerHTML = (!doneChk ? `<button class="ghost" type="button" data-go="chk">体調を記録</button>` : "") + (list.length ? `<button class="ghost" type="button" data-go="act">練習を記録</button>` : "");
+    let nx = null;
+    for (let d = 1; d <= 9 && !nx; d++) {
+      const date = addDays(today, d), r = sessionsOn(date);
+      if (r.list.length) nx = { date, s: r.list[0] };
+    }
+    next.hidden = !nx;
+    if (nx) next.innerHTML = `次の練習は <b>${md(nx.date)}（${dowOf(nx.date)}）</b>：${esc(nx.s.title)}`;
+  }
+  $("td-body").addEventListener("click", e => {
+    const b = e.target.closest(".linkbtn"); if (!b) return;
+    renderStrength(b.dataset.r);
+    $("strength").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  $("td-actions").addEventListener("click", e => {
+    const b = e.target.closest("[data-go]"); if (!b) return;
+    const act = b.dataset.go === "act";
+    $(act ? "tab-act" : "tab-chk").click();
+    if (act) { $("a-date").value = today; if (todayKind) kindSeg.set(todayKind); }
+    else { $("c-date").value = today; fillCheck(); }
+    $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
 
   function meter(label, actual, range, fmt, unit) {
     const hi = range ? range[1] : 0;
