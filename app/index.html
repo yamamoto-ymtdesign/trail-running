@@ -255,6 +255,7 @@ details > .row, details > .field { margin-top: 10px; }
 .td-detail { color: var(--ink-2); font-size: .92rem; }
 .td-list { display: grid; gap: 12px; }
 .td-status { display: flex; flex-wrap: wrap; gap: 6px; }
+.td-hr, .sessions .hr { display: inline-block; font-size: .8rem; color: var(--ink-2); background: var(--grid); border-radius: 4px; padding: 1px 8px; margin-top: 3px; }
 .td-next { font-size: .86rem; color: var(--ink-2); border-top: 1px dashed var(--line); padding-top: 10px; }
 .td-next b { color: var(--ink); }
 
@@ -653,7 +654,7 @@ details > .row, details > .field { margin-top: 10px; }
     const floating = (w.sessions || []).filter(s => !hasDow(s));
     let html = "";
     if (list.length) {
-      html = list.map(s => `<div class="td-main"><div class="td-title">${esc(s.title)}${/筋トレ[AB]/.test(s.title) ? `<button class="linkbtn" type="button" data-r="${s.title.match(/筋トレ([AB])/)[1]}">やり方</button>` : ""}</div>${s.detail ? `<div class="td-detail">${esc(s.detail)}</div>` : ""}</div>`).join("");
+      html = list.map(s => `<div class="td-main"><div class="td-title">${esc(s.title)}${/筋トレ[AB]/.test(s.title) ? `<button class="linkbtn" type="button" data-r="${s.title.match(/筋トレ([AB])/)[1]}">やり方</button>` : ""}</div>${s.detail ? `<div class="td-detail">${esc(s.detail)}</div>` : ""}${s.hr ? `<div><span class="td-hr">目標心拍：${esc(s.hr)}</span></div>` : ""}</div>`).join("");
       todayKind = kindFor(list[0].title);
     } else {
       html = `<div class="td-main"><div class="td-title">休み</div><div class="td-detail">疲れを抜く日です。軽い散歩やストレッチ程度に。</div></div>`;
@@ -723,13 +724,15 @@ details > .row, details > .field { margin-top: 10px; }
         meter("最長の1回", g.longH, w.long, fmtH, "h") +
         `<div class="meter-top"><span class="lbl">距離・km-effort</span><span class="num">${fmtH(g.km)}km ・ ${fmtH(g.ke)}</span></div>`;
       $("sessions").innerHTML = (w.sessions || []).map(s =>
-        `<li><span class="day">${esc(s.day)}</span><div><div class="t">${esc(s.title)}${/筋トレ[AB]/.test(s.title) ? `<button class="linkbtn" type="button" data-r="${s.title.match(/筋トレ([AB])/)[1]}">やり方</button>` : ""}</div>${s.detail ? `<div class="d">${esc(s.detail)}</div>` : ""}</div></li>`).join("")
+        `<li><span class="day">${esc(s.day)}</span><div><div class="t">${esc(s.title)}${/筋トレ[AB]/.test(s.title) ? `<button class="linkbtn" type="button" data-r="${s.title.match(/筋トレ([AB])/)[1]}">やり方</button>` : ""}</div>${s.detail ? `<div class="d">${esc(s.detail)}</div>` : ""}${s.hr ? `<span class="hr">心拍 ${esc(s.hr)}</span>` : ""}</div></li>`).join("")
         + (w.note ? `<li style="display:block"><div class="note">${esc(w.note)}</div></li>` : "");
     }
+    const hrNote = state.config && state.config.hr ? `<br>心拍の目安は、最大心拍 ${esc(state.config.hr.max)}（${esc(state.config.hr.basis || "推定")}）からの暫定値です。` : "";
     const p = priorMax(today, true);
     $("capline").innerHTML = p
       ? `直近30日の最長は <b class="num">${fmtMin(p.min)}</b>（${md(p.date)}）。次のロングは <b class="num">${fmtMin(p.min * 1.1)}</b> までが目安です。`
       : `直近30日の練習記録がまだありません。最初のロングは無理のない長さで。`;
+    $("capline").innerHTML += hrNote;
   }
 
   /* ---------- charts ---------- */
@@ -1201,7 +1204,7 @@ details > .row, details > .field { margin-top: 10px; }
     for (let n = nowWeek; n <= Math.min(24, nowWeek + 4); n++) {
       const w = weekDoc(n); if (!w) continue;
       L.push(`W${n} ${w.start}〜${w.end} ${w.phase}${w.focus ? "・" + w.focus : ""}／時間${rng(w.hours)}h・D+${rng(w.dplus)}m・ロング${rng(w.long)}h`);
-      (w.sessions || []).forEach(x => L.push(`  ${x.day}：${x.title}${x.detail ? "（" + x.detail + "）" : ""}`));
+      (w.sessions || []).forEach(x => L.push(`  ${x.day}：${x.title}${x.detail ? "（" + x.detail + "）" : ""}${x.hr ? "［目標心拍：" + x.hr + "］" : ""}`));
       if (w.note) L.push(`  メモ：${w.note}`);
     }
     L.push("\n週ごとの実績（W1〜今週）：");

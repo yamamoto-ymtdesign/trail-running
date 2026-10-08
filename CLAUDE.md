@@ -33,11 +33,11 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
 
 | コレクション | ドキュメント | 書き手 | フィールド |
 |---|---|---|---|
-| `weeks` | `w01`〜`w24` | Claude | n, start, end, phase, focus, hours[min,max], dplus[min,max], long[min,max](時間), sessions[{day,title,detail}], note |
+| `weeks` | `w01`〜`w24` | Claude | n, start, end, phase, focus, hours[min,max], dplus[min,max], long[min,max](時間), sessions[{day,title,detail,hr}], note。hr は目標心拍の文（ランニング系のみ） |
 | `activities` | 自動ID | ユーザー | date, kind(trail/hill/road/hike/strength/other), min, km, dplus, hr, rpe(1-10), carbs(g合計), fluid(ml合計), gi(0-3), note, createdAt |
 | `checkins` | `YYYY-MM-DD` | ユーザー | date, fatigue(1-5), quad(0-10), knee(0-10), where[], sleep(h), rhr, note |
 | `reviews` | `w01` など | Claude | date, week, title, body（プレーンテキスト） |
-| `config` | `main` | Claude | raceDate, raceName, distanceKm, dplusM, startTime, timeLimitH, targetTime, targetStretch, targetFloor, aid[{name,km,up,down,target,clock,cutoff,margin}], aidNote, planVersion, updatedAt |
+| `config` | `main` | Claude | raceDate, raceName, distanceKm, dplusM, startTime, timeLimitH, targetTime, targetStretch, targetFloor, aid[{name,km,up,down,target,clock,cutoff,margin}], aidNote, hr{max,basis}, planVersion, updatedAt |
 | `knowledge` | `main` | Claude | body（ナレッジ本文）, sources, updatedAt。アプリの「Claudeに質問」が毎回これを読む |
 | `qa` | 自動ID | アプリ | q, a, createdAt, truncated。「Claudeに質問」の質問と回答 |
 
@@ -53,6 +53,7 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
    - 太もも前の張りが3日続けて5以上、または疲労が3日続けて4以上 → 次週を計画の下限か回復週扱いに
    - 計画の下限に2週続けて届かない → 原因（時間・疲労・天候）を聞き、無理に取り戻さず計画のほうを下げる
    - 定点テストが伸びていない → 次の4週の中身（量か強度か下りか）を見直す
+   - 心拍：テストやインターバルで180超がよく出る、または朝の安静時心拍が1週間たまった → 目標心拍（`weeks` の各 session の `hr` と `config.hr`、計画の「心拍の目安」）を作り直す
 4. **聞く**：数字だけで判断できないこと（痛みの様子、仕事の予定、天候）はユーザーに確認してから直す
 5. **書く**
    - `weeks` の該当週を `update`（`if_version` を必ず付ける）。`plan/weeks.json` も同じ内容に直す
