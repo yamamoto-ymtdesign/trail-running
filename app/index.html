@@ -1192,6 +1192,7 @@ details > .row, details > .field { margin-top: 10px; }
 7. 書式：Markdown の見出しや表は使わない。短い段落と「・」の箇条書きで、長くても500字程度`;
   const ASK_SUGGEST = ["今週いちばん大事な練習は？", "勝負どころ（33.7〜45.2km）の走り方は？", "太もも前の張りが抜けないときは？", "ロング走の補給は何をどれくらい？"];
   const ASK_CTX_PAIRS = 3;
+  const ASK_CTX_WINDOW_MS = 3 * 60 * 60 * 1000;
   let askCtl = null, askBusy = false, chatSince = "";
   try { chatSince = localStorage.getItem("chatSince") || ""; } catch (_) {}
 
@@ -1276,7 +1277,8 @@ details > .row, details > .field { margin-top: 10px; }
     if (!q || askBusy || !state.sample) return;
     askBusy = true; $("ask-send").disabled = true; $("ask-stop").hidden = false; $("ask-msg").textContent = "";
     state.askPending = { q, a: "" }; $("ask-q").value = ""; renderChat();
-    const pairs = chatItems().filter(x => x.a).slice(-ASK_CTX_PAIRS);
+    // Only recent exchanges count as the ongoing conversation; older days' answers confused the dates.
+    const pairs = chatItems().filter(x => x.a && Date.now() - Date.parse(x.createdAt) < ASK_CTX_WINDOW_MS).slice(-ASK_CTX_PAIRS);
     const turns = [{ role: "user", content: `${ASK_RULES}\n\n【ナレッジ】\n${state.knowledge && state.knowledge.body ? state.knowledge.body : "（ナレッジを読み込めていません）"}\n\n【最新の記録】\n${snapshotText()}` }];
     pairs.forEach(x => { turns.push({ role: "user", content: x.q }); turns.push({ role: "assistant", content: x.a }); });
     turns.push({ role: "user", content: q });
