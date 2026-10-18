@@ -29,6 +29,12 @@
 - 会話できる上限：登りで約160（本人の感覚、10/10）
 - 練習ごとの目標心拍は plan/training-plan.md の「心拍の目安」
 
+## 定点テスト（里山の登り 約600m・D+60m を全力に近いペースで1本）
+
+| 日付 | タイム | 登坂速度 | 平均心拍 | 最高心拍 |
+|---|---|---|---|---|
+| 2026-10-15（W2） | 3分30秒 | 約1,030m/時 | 記録なし | 175 |
+
 ## 時計（Band 7）について
 
 - Band 7 にはGPSが内蔵されていない。屋外の距離はスマホのGPSを借りて測る（[Amazfit公式](https://us.amazfit.com/products/amazfit-band-7)、[SensorSpecs](https://sensorspecs.fyi/device/amazfit-band-7)）。山では距離と累積標高の精度が下がりやすい。
