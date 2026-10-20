@@ -339,7 +339,7 @@ details > .row, details > .field { margin-top: 10px; }
         <form id="form-act" role="tabpanel" aria-labelledby="tab-act" novalidate>
           <div class="row">
             <div class="field"><label for="a-date">日付</label><input type="date" id="a-date" required></div>
-            <div class="field"><label for="a-min">時間（1:45 または 分）</label><input type="text" id="a-min" inputmode="numeric" placeholder="1:45" autocomplete="off"></div>
+            <div class="field"><label for="a-min" id="a-min-l">時間（1:45 または 分）</label><input type="text" id="a-min" placeholder="1:45" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
           </div>
           <div class="field">
             <span class="flabel" id="a-kind-l">種類</span>
@@ -500,10 +500,14 @@ details > .row, details > .field { margin-top: 10px; }
   const numOrNull = v => { if (v === "" || v == null) return null; const n = Number(v); return isFinite(n) ? n : null; };
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function parseDur(s) {
-    s = String(s || "").trim().replace("：", ":");
-    let m = s.match(/^(\d{1,2}):(\d{1,2})$/);
+    s = String(s || "").normalize("NFKC").trim().replace(/\s+/g, "");
+    let m = s.match(/^(\d{1,2})[:;]([0-5]?\d)$/);
     if (m) return +m[1] * 60 + +m[2];
-    m = s.match(/^(\d+(?:\.\d+)?)\s*h$/i);
+    m = s.match(/^(\d{1,2})(?:h|時間)(?:(\d{1,2})(?:m|分)?)?$/i);
+    if (m) return +m[1] * 60 + +(m[2] || 0);
+    m = s.match(/^(\d+)(?:m|分)$/i);
+    if (m) return +m[1];
+    m = s.match(/^(\d+(?:\.\d+)?)h$/i);
     if (m) return Math.round(+m[1] * 60);
     if (/^\d+$/.test(s)) return +s;
     return null;
@@ -685,7 +689,7 @@ details > .row, details > .field { margin-top: 10px; }
     const b = e.target.closest("[data-go]"); if (!b) return;
     const act = b.dataset.go === "act";
     $(act ? "tab-act" : "tab-chk").click();
-    if (act) { $("a-date").value = today; if (todayKind) kindSeg.set(todayKind); }
+    if (act) { $("a-date").value = today; if (todayKind) { kindSeg.set(todayKind); updMinLabel(); } }
     else { $("c-date").value = today; fillCheck(); }
     $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   });
@@ -1083,6 +1087,8 @@ details > .row, details > .field { margin-top: 10px; }
     return { get: () => multi ? [...sel] : ([...sel][0] ?? null), set: v => { sel.clear(); [].concat(v ?? []).forEach(x => sel.add(String(x))); sync(); } };
   }
   const kindSeg = seg("a-kind", KINDS, false, "trail");
+  const updMinLabel = () => { $("a-min-l").textContent = kindSeg.get() === "strength" ? "時間（筋トレは空欄でも可）" : "時間（1:45 または 分）"; };
+  $("a-kind").addEventListener("change", updMinLabel);
   const giSeg = seg("a-gi", GI, false, null);
   const fatSeg = seg("c-fat", [1, 2, 3, 4, 5].map(v => ({ v, l: String(v) })), false, null);
   const whereSeg = seg("c-where", WHERE.map(v => ({ v, l: v })), true, []);
@@ -1130,9 +1136,11 @@ details > .row, details > .field { margin-top: 10px; }
     const date = $("a-date").value, min = parseDur($("a-min").value), kind = kindSeg.get();
     if (!date) { $("a-msg").textContent = "日付を入れてください。"; return; }
     if (!kind) { $("a-msg").textContent = "種類を選んでください。"; return; }
-    if (!min || min <= 0) { $("a-msg").textContent = "時間を「1:45」か分（105）で入れてください。"; $("a-min").focus(); return; }
+    const minRaw = $("a-min").value.trim();
+    if (kind === "strength" && !minRaw) { /* 筋トレは時間なしでも記録できる */ }
+    else if (!min || min <= 0) { $("a-msg").textContent = "時間を「1:45」か分（105）で入れてください。"; $("a-min").focus(); return; }
     const doc = {
-      date, kind, min, km: numOrNull($("a-km").value), dplus: numOrNull($("a-dplus").value), hr: numOrNull($("a-hr").value),
+      date, kind, min: min || null, km: numOrNull($("a-km").value), dplus: numOrNull($("a-dplus").value), hr: numOrNull($("a-hr").value),
       rpe: +$("a-rpe").value, carbs: numOrNull($("a-carbs").value), fluid: numOrNull($("a-fluid").value),
       gi: giSeg.get() == null ? null : +giSeg.get(), note: $("a-note").value.trim(), createdAt: new Date().toISOString(),
     };
