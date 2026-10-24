@@ -197,6 +197,8 @@ details > .row, details > .field { margin-top: 10px; }
 .kind { font-size: .74rem; padding: 1px 7px; border-radius: 4px; background: var(--grid); }
 .del { appearance: none; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; font-size: .8rem; }
 .del.confirm { color: var(--crit); font-weight: 700; }
+.del.edit { color: var(--accent, var(--ink-2)); }
+.nowrap { white-space: nowrap; }
 .flag { color: var(--warn); font-weight: 700; }
 .empty-state { color: var(--ink-2); font-size: .9rem; padding: 6px 0; }
 
@@ -367,7 +369,7 @@ details > .row, details > .field { margin-top: 10px; }
             <div class="hint" id="a-gph">時間と炭水化物を入れると g/時 を計算します</div>
           </details>
           <div class="field"><label for="a-note">メモ</label><textarea id="a-note" placeholder="例：里山5本。4本目の下りで右膝の外側に違和感"></textarea></div>
-          <div class="actions"><button class="primary" type="submit" id="a-save">記録する</button><span class="formmsg" id="a-msg"></span></div>
+          <div class="actions"><button class="primary" type="submit" id="a-save">記録する</button><button class="del" type="button" id="a-cancel" hidden>編集をやめる</button><span class="formmsg" id="a-msg"></span></div>
         </form>
 
         <form id="form-chk" role="tabpanel" aria-labelledby="tab-chk" hidden novalidate>
@@ -869,16 +871,16 @@ details > .row, details > .field { margin-top: 10px; }
         <td class="r num">${a.km != null ? fmtH(a.km) : "—"}</td><td class="r num">${a.dplus != null ? Math.round(a.dplus).toLocaleString() : "—"}</td>
         <td class="r num">${a.rpe ?? "—"}</td><td class="r num">${gph != null ? gph + "g/時" : "—"}</td>
         <td class="memo">${esc(a.note || "")}</td>
-        <td><button class="del" data-id="${esc(a.id)}" type="button">削除</button></td></tr>`;
+        <td class="nowrap"><button class="del edit" data-id="${esc(a.id)}" type="button">編集</button><button class="del" data-id="${esc(a.id)}" type="button">削除</button></td></tr>`;
     }).join("")}</tbody></table>`;
   }
   function renderChecks() {
     const box = $("checks");
     const rows = state.checks.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
     if (!rows.length) { box.innerHTML = `<p class="empty-state">${state.conn === "ready" ? "まだ体調の記録がありません。「体調」タブから入れてください。" : "読み込み中…"}</p>`; return; }
-    box.innerHTML = `<table class="list"><thead><tr><th>日付</th><th class="r">疲れ</th><th class="r">太もも前</th><th class="r">膝</th><th>場所</th><th class="r">睡眠</th><th class="r">安静時心拍</th><th>メモ</th></tr></thead><tbody>${rows.map(c =>
+    box.innerHTML = `<table class="list"><thead><tr><th>日付</th><th class="r">疲れ</th><th class="r">太もも前</th><th class="r">膝</th><th>場所</th><th class="r">睡眠</th><th class="r">安静時心拍</th><th>メモ</th><th></th></tr></thead><tbody>${rows.map(c =>
       `<tr><td class="num">${md(c.date)}</td><td class="r num">${c.fatigue ?? "—"}</td><td class="r num">${c.quad ?? "—"}</td><td class="r num">${c.knee ?? "—"}</td>
-       <td>${esc((c.where || []).join("・")) || "—"}</td><td class="r num">${c.sleep ?? "—"}</td><td class="r num">${c.rhr ?? "—"}</td><td class="memo">${esc(c.note || "")}</td></tr>`).join("")}</tbody></table>`;
+       <td>${esc((c.where || []).join("・")) || "—"}</td><td class="r num">${c.sleep ?? "—"}</td><td class="r num">${c.rhr ?? "—"}</td><td class="memo">${esc(c.note || "")}</td><td class="nowrap"><button class="del edit" data-chk="${esc(c.date)}" type="button">編集</button></td></tr>`).join("")}</tbody></table>`;
   }
   function renderRacePlan() {
     const c = state.config, aid = c && Array.isArray(c.aid) ? c.aid : null;
@@ -1131,6 +1133,30 @@ details > .row, details > .field { margin-top: 10px; }
     $(msgEl).textContent = "保存できませんでした。通信を確認して、もう一度押してください。";
   }
 
+  let editId = null;
+  function setEditing(id) {
+    editId = id;
+    $("a-save").textContent = id ? "修正を保存する" : "記録する";
+    $("a-cancel").hidden = !id;
+    $("form-act").classList.toggle("editing", !!id);
+  }
+  function clearActForm() {
+    ["a-min", "a-km", "a-dplus", "a-hr", "a-carbs", "a-fluid", "a-note"].forEach(i => { $(i).value = ""; });
+    $("a-rpe").value = 4; $("a-rpe-o").textContent = "4"; giSeg.set(null); $("a-fuel").open = false; updGph();
+  }
+  function startEdit(a) {
+    $("tab-act").click(); setEditing(a.id);
+    $("a-date").value = a.date; kindSeg.set(a.kind); updMinLabel();
+    $("a-min").value = a.min != null ? fmtMin(a.min) : "";
+    $("a-km").value = a.km ?? ""; $("a-dplus").value = a.dplus ?? ""; $("a-hr").value = a.hr ?? "";
+    $("a-rpe").value = a.rpe ?? 4; $("a-rpe-o").textContent = $("a-rpe").value;
+    $("a-carbs").value = a.carbs ?? ""; $("a-fluid").value = a.fluid ?? "";
+    giSeg.set(a.gi ?? null); $("a-fuel").open = a.carbs != null || a.fluid != null || a.gi != null; updGph();
+    $("a-note").value = a.note || ""; $("a-msg").textContent = "";
+    $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
+  $("a-cancel").addEventListener("click", () => { setEditing(null); clearActForm(); $("a-date").value = today; $("a-msg").textContent = ""; });
+
   $("form-act").addEventListener("submit", async e => {
     e.preventDefault(); $("a-msg").textContent = "";
     const date = $("a-date").value, min = parseDur($("a-min").value), kind = kindSeg.get();
@@ -1146,10 +1172,16 @@ details > .row, details > .field { margin-top: 10px; }
     };
     $("a-save").disabled = true;
     try {
-      await state.db.collection("activities").add(doc);
-      ["a-min", "a-km", "a-dplus", "a-hr", "a-carbs", "a-fluid", "a-note"].forEach(i => { $(i).value = ""; });
-      giSeg.set(null); $("a-fuel").open = false; updGph();
-      toast(`${md(date)}の${KIND_LABEL[kind]}を記録しました`);
+      if (editId) {
+        const old = state.acts.find(x => x.id === editId) || {};
+        await state.db.doc("activities/" + editId).set({ ...doc, createdAt: old.createdAt || doc.createdAt, updatedAt: doc.createdAt });
+        setEditing(null); clearActForm(); $("a-date").value = today;
+        toast(`${md(date)}の${KIND_LABEL[kind]}を修正しました`);
+      } else {
+        await state.db.collection("activities").add(doc);
+        clearActForm();
+        toast(`${md(date)}の${KIND_LABEL[kind]}を記録しました`);
+      }
     } catch (err) { writeErr(err, "a-msg"); }
     finally { setWritable(); }
   });
@@ -1171,13 +1203,22 @@ details > .row, details > .field { margin-top: 10px; }
 
   $("recent").addEventListener("click", async e => {
     const b = e.target.closest(".del"); if (!b || !state.db) return;
+    if (b.classList.contains("edit")) {
+      const a = state.acts.find(x => x.id === b.dataset.id); if (a) startEdit(a); return;
+    }
     if (!b.classList.contains("confirm")) {
       document.querySelectorAll(".del.confirm").forEach(x => { x.classList.remove("confirm"); x.textContent = "削除"; });
       b.classList.add("confirm"); b.textContent = "本当に削除"; return;
     }
     b.disabled = true;
-    try { await state.db.doc("activities/" + b.dataset.id).delete(); toast("削除しました"); }
+    try { await state.db.doc("activities/" + b.dataset.id).delete(); if (editId === b.dataset.id) { setEditing(null); clearActForm(); } toast("削除しました"); }
     catch (err) { b.disabled = false; toast("削除できませんでした"); }
+  });
+
+  $("checks").addEventListener("click", e => {
+    const b = e.target.closest("[data-chk]"); if (!b) return;
+    $("tab-chk").click(); $("c-date").value = b.dataset.chk; fillCheck();
+    $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   });
 
   $("prevw").addEventListener("click", () => { state.selWeek = Math.max(1, state.selWeek - 1); render(); });
