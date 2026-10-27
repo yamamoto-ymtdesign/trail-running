@@ -34,7 +34,7 @@ WAKE ALPS TRAIL 2027 ロング（2027/3/22・49.8km・D+2,850m）に向けたト
 | コレクション | ドキュメント | 書き手 | フィールド |
 |---|---|---|---|
 | `weeks` | `w01`〜`w24` | Claude | n, start, end, phase, focus, hours[min,max], dplus[min,max], long[min,max](時間), sessions[{day,title,detail,hr}], note。hr は目標心拍の文（ランニング系のみ） |
-| `activities` | 自動ID | ユーザー | date, kind(trail/hill/road/hike/strength/other), min, km, dplus, hr, rpe(1-10), carbs(g合計), fluid(ml合計), gi(0-3), note, createdAt |
+| `activities` | 自動ID | ユーザー | date, kind(trail/hill/road/hike/strength/other), min, km, dplus, hr, rpe(1-10), carbs(g合計), fluid(ml合計), gi(0-3), ex(筋トレのとき。種目IDの配列), note, createdAt |
 | `checkins` | `YYYY-MM-DD` | ユーザー | date, fatigue(1-5), quad(0-10), knee(0-10), where[], sleep(h), rhr, note |
 | `reviews` | `w01` など | Claude | date, week, title, body（プレーンテキスト） |
 | `config` | `main` | Claude | raceDate, raceName, distanceKm, dplusM, startTime, timeLimitH, targetTime, targetStretch, targetFloor, aid[{name,km,up,down,target,clock,cutoff,margin}], aidNote, hr{max,basis}, planVersion, updatedAt |
