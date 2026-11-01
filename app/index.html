@@ -148,6 +148,9 @@ input[type="text"], input[type="number"], input[type="date"], textarea {
 textarea { min-height: 64px; resize: vertical; }
 .seg { display: flex; flex-wrap: wrap; gap: 4px; }
 .seg button { appearance: none; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 10px; cursor: pointer; min-height: 36px; }
+.exquick { margin-top: 6px; }
+.exquick button { font-size: .8rem; min-height: 30px; padding: 3px 9px; }
+.exlist { font-size: .78rem; color: var(--accent); }
 .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .rangef { display: grid; grid-template-columns: minmax(0, 1fr) 2.6em; align-items: center; gap: 10px; }
 .rangef output { font-family: var(--font-num); text-align: right; font-size: 1.05rem; }
@@ -347,6 +350,11 @@ details > .row, details > .field { margin-top: 10px; }
             <span class="flabel" id="a-kind-l">種類</span>
             <div class="seg" id="a-kind" role="radiogroup" aria-labelledby="a-kind-l"></div>
           </div>
+          <div class="field" id="a-ex-wrap" hidden>
+            <span class="flabel" id="a-ex-l">やった種目（複数可）</span>
+            <div class="seg" id="a-ex" aria-labelledby="a-ex-l"></div>
+            <div class="seg exquick"><button type="button" id="a-ex-A">筋トレA 全部</button><button type="button" id="a-ex-B">筋トレB 全部</button><button type="button" id="a-ex-none">選択を外す</button></div>
+          </div>
           <div class="row">
             <div class="field"><label for="a-km">距離 km</label><input type="number" id="a-km" inputmode="decimal" step="0.1" min="0" placeholder="12.5"></div>
             <div class="field"><label for="a-dplus">累積標高 m</label><input type="number" id="a-dplus" inputmode="numeric" step="10" min="0" placeholder="650"></div>
@@ -490,6 +498,21 @@ details > .row, details > .field { margin-top: 10px; }
   const GI = [{ v: 0, l: "0 問題なし" }, { v: 1, l: "1 少し" }, { v: 2, l: "2 つらい" }, { v: 3, l: "3 吐いた・止まった" }];
 
   const $ = id => document.getElementById(id);
+  /* ボタンから目的の場所へ移動する。埋め込み表示でも動くよう、scrollIntoView と window.scrollTo の両方を使う */
+  function goTo(el) {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const run = () => {
+      try { el.scrollIntoView({ behavior: "auto", block: "start" }); } catch (_) {}
+      const top = el.getBoundingClientRect().top;
+      if (Math.abs(top) > 8) {
+        try { window.scrollTo({ top: top + (window.pageYOffset || document.documentElement.scrollTop || 0), behavior: reduce ? "auto" : "smooth" }); } catch (_) {}
+      }
+      if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+      try { el.focus({ preventScroll: true }); } catch (_) {}
+    };
+    run();
+    setTimeout(() => { if (Math.abs(el.getBoundingClientRect().top) > 40) run(); }, 350);
+  }
   const pad = n => String(n).padStart(2, "0");
   const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const dnum = s => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
@@ -685,7 +708,7 @@ details > .row, details > .field { margin-top: 10px; }
   $("td-body").addEventListener("click", e => {
     const b = e.target.closest(".linkbtn"); if (!b) return;
     renderStrength(b.dataset.r);
-    $("strength").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    goTo($("strength"));
   });
   $("td-actions").addEventListener("click", e => {
     const b = e.target.closest("[data-go]"); if (!b) return;
@@ -693,7 +716,7 @@ details > .row, details > .field { margin-top: 10px; }
     $(act ? "tab-act" : "tab-chk").click();
     if (act) { $("a-date").value = today; if (todayKind) { kindSeg.set(todayKind); updMinLabel(); } }
     else { $("c-date").value = today; fillCheck(); }
-    $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    goTo($("log-h"));
   });
 
   function meter(label, actual, range, fmt, unit) {
@@ -870,7 +893,7 @@ details > .row, details > .field { margin-top: 10px; }
         <td class="r num">${fmtMin(a.min)}${s ? ` <span class="flag" title="直近30日の最長の${s.ratio.toFixed(2)}倍">↑</span>` : ""}</td>
         <td class="r num">${a.km != null ? fmtH(a.km) : "—"}</td><td class="r num">${a.dplus != null ? Math.round(a.dplus).toLocaleString() : "—"}</td>
         <td class="r num">${a.rpe ?? "—"}</td><td class="r num">${gph != null ? gph + "g/時" : "—"}</td>
-        <td class="memo">${esc(a.note || "")}</td>
+        <td class="memo">${a.ex && a.ex.length ? `<div class="exlist">${a.ex.map(id => esc(EX[id] ? EX[id].name : id)).join("・")}</div>` : ""}${esc(a.note || "")}</td>
         <td class="nowrap"><button class="del edit" data-id="${esc(a.id)}" type="button">編集</button><button class="del" data-id="${esc(a.id)}" type="button">削除</button></td></tr>`;
     }).join("")}</tbody></table>`;
   }
@@ -1070,7 +1093,7 @@ details > .row, details > .field { margin-top: 10px; }
   $("sessions").addEventListener("click", e => {
     const b = e.target.closest(".linkbtn"); if (!b) return;
     renderStrength(b.dataset.r);
-    $("strength").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    goTo($("strength"));
   });
   renderStrength("A");
 
@@ -1089,7 +1112,16 @@ details > .row, details > .field { margin-top: 10px; }
     return { get: () => multi ? [...sel] : ([...sel][0] ?? null), set: v => { sel.clear(); [].concat(v ?? []).forEach(x => sel.add(String(x))); sync(); } };
   }
   const kindSeg = seg("a-kind", KINDS, false, "trail");
-  const updMinLabel = () => { $("a-min-l").textContent = kindSeg.get() === "strength" ? "時間（筋トレは空欄でも可）" : "時間（1:45 または 分）"; };
+  const EX_ORDER = ["stepdown", "stepup", "bulgarian", "rdl", "wallsit", "bandwalk", "calf", "sideplank"];
+  const exSeg = seg("a-ex", EX_ORDER.map(id => ({ v: id, l: EX[id].name })), true, []);
+  const updMinLabel = () => {
+    const st = kindSeg.get() === "strength";
+    $("a-min-l").textContent = st ? "時間（筋トレは空欄でも可）" : "時間（1:45 または 分）";
+    $("a-ex-wrap").hidden = !st;
+  };
+  $("a-ex-A").addEventListener("click", () => exSeg.set(ROUTINES.A.map(r => r[0])));
+  $("a-ex-B").addEventListener("click", () => exSeg.set(ROUTINES.B.map(r => r[0])));
+  $("a-ex-none").addEventListener("click", () => exSeg.set([]));
   $("a-kind").addEventListener("change", updMinLabel);
   const giSeg = seg("a-gi", GI, false, null);
   const fatSeg = seg("c-fat", [1, 2, 3, 4, 5].map(v => ({ v, l: String(v) })), false, null);
@@ -1142,18 +1174,18 @@ details > .row, details > .field { margin-top: 10px; }
   }
   function clearActForm() {
     ["a-min", "a-km", "a-dplus", "a-hr", "a-carbs", "a-fluid", "a-note"].forEach(i => { $(i).value = ""; });
-    $("a-rpe").value = 4; $("a-rpe-o").textContent = "4"; giSeg.set(null); $("a-fuel").open = false; updGph();
+    $("a-rpe").value = 4; $("a-rpe-o").textContent = "4"; giSeg.set(null); exSeg.set([]); $("a-fuel").open = false; updGph();
   }
   function startEdit(a) {
     $("tab-act").click(); setEditing(a.id);
-    $("a-date").value = a.date; kindSeg.set(a.kind); updMinLabel();
+    $("a-date").value = a.date; kindSeg.set(a.kind); exSeg.set(a.ex || []); updMinLabel();
     $("a-min").value = a.min != null ? fmtMin(a.min) : "";
     $("a-km").value = a.km ?? ""; $("a-dplus").value = a.dplus ?? ""; $("a-hr").value = a.hr ?? "";
     $("a-rpe").value = a.rpe ?? 4; $("a-rpe-o").textContent = $("a-rpe").value;
     $("a-carbs").value = a.carbs ?? ""; $("a-fluid").value = a.fluid ?? "";
     giSeg.set(a.gi ?? null); $("a-fuel").open = a.carbs != null || a.fluid != null || a.gi != null; updGph();
     $("a-note").value = a.note || ""; $("a-msg").textContent = "";
-    $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    goTo($("log-h"));
   }
   $("a-cancel").addEventListener("click", () => { setEditing(null); clearActForm(); $("a-date").value = today; $("a-msg").textContent = ""; });
 
@@ -1168,7 +1200,7 @@ details > .row, details > .field { margin-top: 10px; }
     const doc = {
       date, kind, min: min || null, km: numOrNull($("a-km").value), dplus: numOrNull($("a-dplus").value), hr: numOrNull($("a-hr").value),
       rpe: +$("a-rpe").value, carbs: numOrNull($("a-carbs").value), fluid: numOrNull($("a-fluid").value),
-      gi: giSeg.get() == null ? null : +giSeg.get(), note: $("a-note").value.trim(), createdAt: new Date().toISOString(),
+      gi: giSeg.get() == null ? null : +giSeg.get(), ...(kind === "strength" ? { ex: exSeg.get() } : {}), note: $("a-note").value.trim(), createdAt: new Date().toISOString(),
     };
     $("a-save").disabled = true;
     try {
@@ -1218,7 +1250,7 @@ details > .row, details > .field { margin-top: 10px; }
   $("checks").addEventListener("click", e => {
     const b = e.target.closest("[data-chk]"); if (!b) return;
     $("tab-chk").click(); $("c-date").value = b.dataset.chk; fillCheck();
-    $("log-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    goTo($("log-h"));
   });
 
   $("prevw").addEventListener("click", () => { state.selWeek = Math.max(1, state.selWeek - 1); render(); });
