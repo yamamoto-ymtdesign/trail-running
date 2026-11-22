@@ -563,11 +563,13 @@ details > .row, details > .field { margin-top: 10px; }
     }
     return best;
   }
+  // 直近30日の最長の1.2倍まで。最長が30km以上なら1.1倍（11/23 ユーザーの判断で1.1→1.2）
+  const spikeLimit = p => (p && p.km != null && p.km >= 30) ? 1.1 : 1.2;
   function spikeOf(a) {
     if (!RUN.has(a.kind) || !a.min || a.min < 60) return null;
     const p = priorMax(a.date, false);
-    if (!p || a.min <= p.min * 1.1) return null;
-    return { ratio: a.min / p.min, prior: p };
+    if (!p || a.min <= p.min * spikeLimit(p)) return null;
+    return { ratio: a.min / p.min, prior: p, limit: spikeLimit(p) };
   }
   function streak(field, thr, need) {
     // consecutive calendar days (most recent within the last 7 days) where field >= thr
@@ -593,7 +595,7 @@ details > .row, details > .field { margin-top: 10px; }
     for (const a of state.acts) {
       if (dnum(a.date) < dnum(today) - 13) continue;
       const s = spikeOf(a);
-      if (s) out.push({ lv: "warn", t: `<b>${md(a.date)}の ${fmtMin(a.min)} は、直近30日の最長（${md(s.prior.date)}・${fmtMin(s.prior.min)}）の ${s.ratio.toFixed(2)}倍</b>。1.1倍以内が目安です。` });
+      if (s) out.push({ lv: "warn", t: `<b>${md(a.date)}の ${fmtMin(a.min)} は、直近30日の最長（${md(s.prior.date)}・${fmtMin(s.prior.min)}）の ${s.ratio.toFixed(2)}倍</b>。${s.limit}倍以内が目安です。` });
     }
     const w = weekDoc(nowWeek), g = weekAgg(nowWeek);
     if (w && w.hours && g.h > w.hours[1] * 1.15) out.push({ lv: "warn", t: `<b>今週の時間が計画の上限を15%以上超えています</b>（${fmtH(g.h)}h ／ 計画 ${rng(w.hours)}h）。` });
@@ -759,7 +761,7 @@ details > .row, details > .field { margin-top: 10px; }
     const hrNote = state.config && state.config.hr ? `<br>心拍の目安は、最大心拍 ${esc(state.config.hr.max)}（${esc(state.config.hr.basis || "推定")}）からの暫定値です。` : "";
     const p = priorMax(today, true);
     $("capline").innerHTML = p
-      ? `直近30日の最長は <b class="num">${fmtMin(p.min)}</b>（${md(p.date)}）。次のロングは <b class="num">${fmtMin(p.min * 1.1)}</b> までが目安です。`
+      ? `直近30日の最長は <b class="num">${fmtMin(p.min)}</b>（${md(p.date)}）。次のロングは <b class="num">${fmtMin(p.min * spikeLimit(p))}</b> までが目安です。`
       : `直近30日の練習記録がまだありません。最初のロングは無理のない長さで。`;
     $("capline").innerHTML += hrNote;
   }
@@ -1302,7 +1304,7 @@ details > .row, details > .field { margin-top: 10px; }
     L.push(`\n直近14日の体調（${cks.length}件）：`);
     cks.forEach(c => L.push(`${c.date} 疲れ${c.fatigue ?? "—"}/5・太もも前${c.quad ?? "—"}/10・膝${c.knee ?? "—"}/10${c.where && c.where.length ? "（" + c.where.join("・") + "）" : ""}・睡眠${c.sleep ?? "—"}h・安静時心拍${c.rhr ?? "—"}${c.note ? "・メモ：" + c.note : ""}`));
     const p = priorMax(today, true);
-    L.push(`\n次のロングの上限目安：${p ? fmtMin(p.min * 1.1) + "（直近30日の最長 " + fmtMin(p.min) + "・" + p.date + "）" : "記録なし"}`);
+    L.push(`\n次のロングの上限目安：${p ? fmtMin(p.min * spikeLimit(p)) + "（直近30日の最長 " + fmtMin(p.min) + "・" + p.date + "）" : "記録なし"}`);
     const al = alerts();
     L.push(`現在の警告：${al.length ? al.map(a => a.t.replace(/<[^>]+>/g, "")).join(" ／ ") : "なし"}`);
     const r = state.reviews.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
